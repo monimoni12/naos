@@ -10,7 +10,7 @@ spring:
     include: secret
   datasource:
     url: jdbc:h2:./db_dev;MODE=MySQL
-    username: moni_local
+    username: moni
     password:
     driver-class-name: org.h2.Driver
     jpa:
