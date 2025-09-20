@@ -1,0 +1,8 @@
+# docker 설정, 등
+
+custom:
+  site:
+    name: "NAOS"
+    cookieDomain: "${custom.prod.cookieDomain}"
+    frontUrl: "${custom.prod.frontUrl}"
+    backUrl: "${custom.prod.backUrl}"

@@ -1,0 +1,8 @@
+# test code 돌릴 때 - h2 db 쓸 때 등등
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:db_test:MODE=MYSQL
+    username: moni
+    password:

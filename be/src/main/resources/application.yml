@@ -1,0 +1,49 @@
+server:
+  port: 8090
+
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+  profiles:
+    active: dev
+    include: secret
+  datasource:
+    url: jdbc:h2:./db_dev;MODE=MySQL
+    username: moni_local
+    password:
+    driver-class-name: org.h2.Driver
+    jpa:
+      open-in-view: false
+      hibernate:
+        ddl-auto: update
+      properties:
+        hibernate:
+          default_batch_fetch_size: 100
+          format_sql: true
+          highlight_sql: true
+          use_sql_comments: true
+  logging:
+    level:
+      com.dd.blog: DEBUG
+      org.hibernate.SQL: DEBUG
+      org.hibernate.orm.jdbc.bind: TRACE
+      org.hibernate.orm.jdbc.extract: TRACE
+      org.springframework.transaction.interceptor: TRACE
+  custom:
+    dev:
+      cookieDomain: localhost
+      frontUrl: "http://${custom.dev.cookieDomain}:3000"
+      backUrl: "http://${custom.dev.cookieDomain}:${server.port}"
+    prod:
+      cookieDomain: naossss.site
+      frontUrl: "https://www.${custom.prod.cookieDomain}"
+      backUrl: "https://api.blog.${custom.prod.cookieDomain}"
+    site:
+      name: "NAOS DEV"
+      cookie:
+        secure: false
+        sameSite: Lax
+      cookieDomain: "${custom.dev.cookieDomain}"
+      frontUrl: "${custom.dev.frontUrl}"
+      backUrl: "${custom.dev.backUrl}"
