@@ -112,10 +112,14 @@
 ## Project Design
 ## 요구사항 정의
 ### 기술 스펙
-FE: Next.js 기반 반응형 웹앱 (UI/UX)
-BE: Spring Boot + JPA + MySQL (레시피 DB, 유저 관리, 포인트·리워드)
-AI: Python Flask microservice로 레시피 생성/요약/변형 지원
-infra: AWS EC2, RDS, S3, Docker, CI/CD
+| 분류 | 기술 스택 |
+|------|-----------|
+| **Frontend** | ![React](https://img.shields.io/badge/react-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) |
+| **Backend** | ![Spring Boot](https://img.shields.io/badge/springboot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white) ![MySQL](https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white) |
+| **DevOps / Infra** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![Amazon EC2](https://img.shields.io/badge/Amazon%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) ![Amazon S3](https://img.shields.io/badge/Amazon%20S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white) ![NGINX](https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white) ![Terraform](https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white) |
+| **AI** | ![Python Flask Microservice](https://img.shields.io/badge/Microservice-Flask-blue?style=for-the-badge&logo=flask&logoColor=white) |
+| **Documentation/Test** | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=white) |
+
 
 ### feature 상세 설명
 - `자동 성분 계산`: 실제 사용자 레시피 입력 후 Nutrition API와 DB 연동 정확도 테스트 (예상 결과: ±5% 이내 오차)
