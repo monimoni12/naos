@@ -7,7 +7,7 @@ import lombok.*;
 @Entity
 @Table(name="recipe_script_segments",
         uniqueConstraints=@UniqueConstraint(name="uq_recipe_seg", columnNames={"recipe_id","idx_ord"}))
-public class RecipeScriptSegment {
+public class RecipeClipSegment {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
     private Long id;
 
