@@ -9,10 +9,10 @@ spring:
     active: dev
     include: secret
   datasource:
-    url: jdbc:h2:./db_dev;MODE=MySQL
+    url: jdbc:mysql://localhost:3307/naos_dev?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: moni
-    password:
-    driver-class-name: org.h2.Driver
+    password: moni1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
     jpa:
       open-in-view: false
       hibernate:
