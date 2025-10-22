@@ -1,0 +1,387 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 30 25% 98%;
+    --foreground: 20 15% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 15% 20%;
+
+    --mocha: 35 25% 68%;
+    --mocha-foreground: 0 0% 100%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 15% 20%;
+
+    --primary: 16 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 25% 68%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 30 20% 95%;
+    --muted-foreground: 20 10% 45%;
+
+    --accent: 35 25% 68%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 15% 90%;
+    --input: 30 15% 90%;
+    --ring: 16 100% 60%;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(16 100% 60%), hsl(16 100% 70%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(30 25% 99%));
+    
+    --shadow-card: 0 2px 8px -2px hsl(20 15% 20% / 0.08);
+    --shadow-hover: 0 8px 24px -4px hsl(20 15% 20% / 0.12);
+    
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 20 20% 12%;
+    --foreground: 30 20% 95%;
+
+    --mocha: 35 20% 48%;
+    --mocha-foreground: 0 0% 100%;
+
+    --card: 20 18% 15%;
+    --card-foreground: 30 20% 95%;
+
+    --popover: 20 18% 15%;
+    --popover-foreground: 30 20% 95%;
+
+    --primary: 16 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 20% 48%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 20 15% 22%;
+    --muted-foreground: 30 10% 60%;
+
+    --accent: 35 20% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 15% 22%;
+    --input: 20 15% 22%;
+    --ring: 16 100% 60%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(16 100% 55%), hsl(16 100% 65%));
+    --gradient-card: linear-gradient(180deg, hsl(20 18% 15%), hsl(20 18% 17%));
+    
+    --shadow-card: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-hover: 0 8px 24px -4px hsl(0 0% 0% / 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  @keyframes bubble-pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+  
+  @keyframes sparkle {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+      filter: brightness(1) drop-shadow(0 0 0px transparent);
+    }
+    25% {
+      transform: scale(1.5) rotate(-10deg);
+      filter: brightness(1.5) drop-shadow(0 0 8px hsl(45 100% 60%));
+    }
+    75% {
+      transform: scale(1.5) rotate(10deg);
+      filter: brightness(1.5) drop-shadow(0 0 8px hsl(45 100% 60%));
+    }
+  }
+  
+  @keyframes award-shine {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 0px transparent);
+    }
+    50% {
+      transform: scale(1.5) rotate(45deg);
+      filter: drop-shadow(0 0 12px hsl(45 100% 60%));
+    }
+  }
+  
+  @keyframes search-zoom {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.6);
+    }
+  }
+  
+  @keyframes home-bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    25% {
+      transform: translateY(-8px);
+    }
+    50% {
+      transform: translateY(0);
+    }
+    75% {
+      transform: translateY(-4px);
+    }
+  }
+  
+  @keyframes play-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.3);
+      opacity: 0.7;
+    }
+  }
+  
+  @keyframes plus-pop {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.4);
+    }
+  }
+  
+  @keyframes heart-beat {
+    0%, 100% {
+      transform: scale(1);
+    }
+    15% {
+      transform: scale(1.3);
+    }
+    30% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.25);
+    }
+    60% {
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes user-wave {
+    0%, 100% {
+      transform: scale(1) translateX(0);
+    }
+    25% {
+      transform: scale(1.2) translateX(-3px);
+    }
+    50% {
+      transform: scale(1.3) translateX(0);
+    }
+    75% {
+      transform: scale(1.2) translateX(3px);
+    }
+  }
+
+  /* Badge Level Animations - Discord-like super reactions */
+  @keyframes badge-bronze-bounce {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+    }
+    10% {
+      transform: scale(1.2) rotate(-5deg);
+    }
+    30% {
+      transform: scale(0.95) rotate(5deg);
+    }
+    50% {
+      transform: scale(1.15) rotate(-3deg);
+    }
+    70% {
+      transform: scale(0.98) rotate(2deg);
+    }
+  }
+
+  @keyframes badge-silver-wobble {
+    0%, 100% {
+      transform: scale(1) rotate(0deg) translateY(0);
+    }
+    15% {
+      transform: scale(1.25) rotate(-8deg) translateY(-5px);
+    }
+    30% {
+      transform: scale(1.1) rotate(8deg) translateY(-3px);
+    }
+    45% {
+      transform: scale(1.2) rotate(-6deg) translateY(-4px);
+    }
+    60% {
+      transform: scale(1.05) rotate(4deg) translateY(-2px);
+    }
+    75% {
+      transform: scale(1.15) rotate(-2deg) translateY(-3px);
+    }
+  }
+
+  @keyframes badge-gold-explode {
+    0% {
+      transform: scale(1) rotate(0deg);
+      filter: brightness(1);
+    }
+    20% {
+      transform: scale(1.4) rotate(15deg);
+      filter: brightness(1.5) drop-shadow(0 0 20px hsl(45 100% 50%));
+    }
+    40% {
+      transform: scale(1.1) rotate(-10deg);
+      filter: brightness(1.3);
+    }
+    60% {
+      transform: scale(1.35) rotate(8deg);
+      filter: brightness(1.6) drop-shadow(0 0 25px hsl(45 100% 50%));
+    }
+    80% {
+      transform: scale(1.05) rotate(-5deg);
+      filter: brightness(1.2);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes badge-platinum-float {
+    0%, 100% {
+      transform: scale(1) translateY(0) rotate(0deg);
+      filter: brightness(1);
+    }
+    25% {
+      transform: scale(1.2) translateY(-8px) rotate(5deg);
+      filter: brightness(1.3) drop-shadow(0 0 15px hsl(200 20% 80%));
+    }
+    50% {
+      transform: scale(1.3) translateY(-12px) rotate(-5deg);
+      filter: brightness(1.4) drop-shadow(0 0 20px hsl(200 20% 80%));
+    }
+    75% {
+      transform: scale(1.2) translateY(-8px) rotate(3deg);
+      filter: brightness(1.3) drop-shadow(0 0 18px hsl(200 20% 80%));
+    }
+  }
+
+  @keyframes badge-diamond-supernova {
+    0% {
+      transform: scale(1) rotate(0deg);
+      filter: brightness(1) drop-shadow(0 0 10px hsl(180 100% 50%));
+    }
+    15% {
+      transform: scale(1.5) rotate(45deg);
+      filter: brightness(1.8) drop-shadow(0 0 30px hsl(180 100% 50%)) drop-shadow(0 0 50px hsl(280 100% 50%));
+    }
+    30% {
+      transform: scale(1.2) rotate(90deg);
+      filter: brightness(1.5) drop-shadow(0 0 25px hsl(280 100% 50%));
+    }
+    45% {
+      transform: scale(1.6) rotate(135deg);
+      filter: brightness(2) drop-shadow(0 0 40px hsl(180 100% 50%)) drop-shadow(0 0 60px hsl(45 100% 50%));
+    }
+    60% {
+      transform: scale(1.3) rotate(180deg);
+      filter: brightness(1.7) drop-shadow(0 0 35px hsl(45 100% 50%));
+    }
+    75% {
+      transform: scale(1.5) rotate(225deg);
+      filter: brightness(1.9) drop-shadow(0 0 45px hsl(280 100% 50%)) drop-shadow(0 0 55px hsl(180 100% 50%));
+    }
+    90% {
+      transform: scale(1.2) rotate(315deg);
+      filter: brightness(1.6) drop-shadow(0 0 30px hsl(180 100% 50%));
+    }
+    100% {
+      transform: scale(1) rotate(360deg);
+      filter: brightness(1) drop-shadow(0 0 10px hsl(180 100% 50%));
+    }
+  }
+}
+
+@layer components {
+  /* Badge Level Styles */
+  .badge-bronze {
+    animation: badge-bronze-bounce 2.5s ease-in-out infinite;
+    transition: all 0.3s ease;
+  }
+  
+  .badge-bronze:hover {
+    transform: scale(1.3);
+    filter: brightness(1.2) drop-shadow(0 0 15px hsl(25 50% 45%));
+  }
+
+  .badge-silver {
+    animation: badge-silver-wobble 3s ease-in-out infinite;
+    transition: all 0.3s ease;
+  }
+  
+  .badge-silver:hover {
+    transform: scale(1.3);
+    filter: brightness(1.25) drop-shadow(0 0 20px hsl(0 0% 70%));
+  }
+
+  .badge-gold {
+    animation: badge-gold-explode 3s ease-in-out infinite;
+    transition: all 0.3s ease;
+  }
+  
+  .badge-gold:hover {
+    transform: scale(1.4);
+    filter: brightness(1.6) drop-shadow(0 0 30px hsl(45 100% 50%));
+  }
+
+  .badge-platinum {
+    animation: badge-platinum-float 4s ease-in-out infinite;
+    transition: all 0.3s ease;
+  }
+  
+  .badge-platinum:hover {
+    transform: scale(1.4) translateY(-10px);
+    filter: brightness(1.5) drop-shadow(0 0 25px hsl(200 20% 80%));
+  }
+
+  .badge-diamond {
+    animation: badge-diamond-supernova 4s linear infinite;
+    transition: all 0.3s ease;
+  }
+  
+  .badge-diamond:hover {
+    transform: scale(1.5);
+    filter: brightness(2.2) drop-shadow(0 0 50px hsl(180 100% 50%)) drop-shadow(0 0 70px hsl(280 100% 50%));
+  }
+}
