@@ -10,8 +10,13 @@ import java.util.List;
  * - 유저 간 팔로우/언팔로우/목록 조회 처리
  */
 public interface FollowRepository extends JpaRepository<Follow, Long> {
-    boolean existsByFollowerAndFollowing(User follower, User following);
-    List<Follow> findByFollower(User follower);
-    List<Follow> findByFollowing(User following);
-    void deleteByFollowerAndFollowing(User follower, User following);
+
+    List<Follow> findByFollower(User follower);  // 내가 팔로우한 사람 목록
+    List<Follow> findByFollowee(User followee);  // 나를 팔로우한 사람 목록
+
+    // 이미 팔로우 관계가 존재하는지 여부
+    boolean existsByFollowerAndFollowee(User follower, User followee);
+
+    // 언팔로우 시 필요할 수 있음
+    void deleteByFollowerAndFollowee(User follower, User followee);
 }
