@@ -1,10 +1,12 @@
-import { useNavigate } from "react-router-dom";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import RecipeCard from "@/features/recipes/components/RecipeCard";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Following() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -13,7 +15,7 @@ export default function Following() {
     const loadFollowingRecipes = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        navigate("/auth");
+        router.push("/auth");
         return;
       }
 
@@ -77,7 +79,7 @@ export default function Following() {
     };
 
     loadFollowingRecipes();
-  }, [navigate]);
+  }, [router]);
 
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6">

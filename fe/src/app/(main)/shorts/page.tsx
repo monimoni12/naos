@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, MessageCircle, Share2, Bookmark, Volume2, VolumeX, Eye, MoreHorizontal, AlertCircle, EyeOff, UserMinus, QrCode, ArrowLeft, ChefHat, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,12 +16,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// 명시적 타입 선언
+type Profile = {
+  user_id: string;
+  username: string | null;
+  avatar_url: string | null;
+};
+
+type Recipe = {
+  id: string;
+  user_id: string;
+  video_url: string | null;
+  title: string | null;
+  description: string | null;
+  likes_count: number | null;
+  comments_count: number | null;
+  steps?: any[];
+};
+
 export default function Shorts() {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter(); // Next.js 라우터
+  const searchParams = useSearchParams(); // 쿼리 파라미터 접근용
   const { toast } = useToast();
-  const fromSearch = location.state?.fromSearch || false;
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const fromSearch = searchParams.get("from") === "search";
+
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showCC, setShowCC] = useState(false);
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
@@ -59,7 +80,7 @@ export default function Shorts() {
     }
   }, [currentIndex, currentShort, currentUserId]);
 
-  const loadShorts = async () => {
+  const loadShorts = async (): Promise<void> => {
     setLoading(true);
 
     try {
@@ -80,7 +101,7 @@ export default function Shorts() {
       }
 
       // 먼저 기본 데이터로 쇼츠 설정 (프로필 없이)
-      const initialShorts = recipesData.map(recipe => ({
+      const initialShorts = recipesData.map((recipe:Recipe) => ({
         id: recipe.id,
         author: {
           name: "로딩중...",
@@ -99,16 +120,19 @@ export default function Shorts() {
       setLoading(false);
 
       // 백그라운드에서 프로필 정보 로드
-      const userIds = [...new Set(recipesData.map(r => r.user_id))];
+      const userIds = [...new Set(recipesData.map((r:any) => r.user_id))];
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("user_id, username, avatar_url")
         .in("user_id", userIds);
       
       if (profilesData) {
-        const profilesMap = new Map(profilesData.map(p => [p.user_id, p]));
+        const profilesMap = new Map<string, Profile>(
+          profilesData.map((p: Profile) => [p.user_id, p])
+        );
         
-        setShorts(prev => prev.map(short => {
+        setShorts((prev) => 
+          prev.map((short:any) => {
           const profile = profilesMap.get(short.author.userId);
           return {
             ...short,
@@ -181,22 +205,24 @@ export default function Shorts() {
       return;
     }
 
-    // Get unique user IDs from comments
-    const userIds = [...new Set(commentsData.map(c => c.user_id))];
+    // 1) 댓글 작성자 ID 추출
+    const userIds = [...new Set(commentsData.map((c: any) => c.user_id))];
     
-    // Fetch profiles
+    // 2) 프로필 데이터 조회
     const { data: profilesData } = await supabase
       .from("profiles")
       .select("user_id, username, avatar_url")
       .in("user_id", userIds);
     
-    // Create a map of user_id to profile
-    const profilesMap = new Map(
-      profilesData?.map(p => [p.user_id, p]) || []
+    // 3) Map 생성 시 제네릭 명시
+    const profilesMap: Map<string, Profile> = new Map<string, Profile>(
+      (profilesData ?? []).map((p: Profile) => [p.user_id, p])
     );
 
-    const formattedComments = commentsData.map(comment => {
-      const profile = profilesMap.get(comment.user_id);
+    // 4) profile 타입 명시
+    const formattedComments = commentsData.map((comment: any) => {
+      const profile = profilesMap.get(comment.user_id) as Profile | undefined; 
+      
       return {
         id: comment.id,
         author: {
@@ -208,6 +234,8 @@ export default function Shorts() {
         timestamp: new Date(comment.created_at).toLocaleString("ko-KR"),
       };
     });
+
+    // 5) 상태 업데이트
     setComments(formattedComments);
   };
 
@@ -262,7 +290,7 @@ export default function Shorts() {
       storedCookingRecipes.push(id);
       localStorage.setItem("cookingRecipes", JSON.stringify(storedCookingRecipes));
       setCookingRecipes(new Set([...cookingRecipes, id]));
-      navigate(`/post/${id}`);
+      router.push(`/post/${id}`);
     } else {
       // 요리중 상태만 제거하고, 진행 상황(cookingProgress)은 유지
       const filtered = storedCookingRecipes.filter((recipeId: string) => recipeId !== id);
@@ -307,7 +335,7 @@ export default function Shorts() {
 
       // If no shorts left, go back
       if (updatedShorts.length === 0) {
-        navigate('/');
+        router.push('/');
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -382,7 +410,7 @@ export default function Shorts() {
         {/* Back Button (only show when coming from search) */}
         {fromSearch && (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => router.back()}
             className="absolute top-6 left-6 h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition-colors pointer-events-auto z-20"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -432,7 +460,7 @@ export default function Shorts() {
 
               <button
                 className="flex flex-col items-center gap-1 text-white hover:scale-110 transition-transform w-20"
-                onClick={() => navigate(`/post/${currentShort.id}`)}
+                onClick={() => router.push(`/post/${currentShort.id}`)}
               >
                 <Eye className="h-5 w-5 drop-shadow-lg" />
                 <span className="text-xs drop-shadow text-center">상세보기</span>
