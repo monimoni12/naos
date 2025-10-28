@@ -1,5 +1,10 @@
-import { Home, PlaySquare, PlusCircle, Heart, User, Sparkles, Flame, Award, Search as SearchIcon, X, ChevronLeft } from "lucide-react";
-import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+"use client";
+
+import { Home, PlaySquare, PlusCircle, Heart, User, 
+    Sparkles, Flame, Award, Search as SearchIcon, X, ChevronLeft 
+} from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import logo from "@/assets/logo.png";
 import speechBubble from "@/assets/speech-bubble.png";
@@ -13,25 +18,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function Layout() {
-  const navigate = useNavigate();
-  const location = useLocation();
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSpeechBubble, setShowSpeechBubble] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   
-  const isHotPage = location.pathname === "/hot";
-  const isHomePage = location.pathname === "/" || location.pathname === "/hot";
-  const isShortsPage = location.pathname === "/shorts";
+  const isHotPage = pathname === "/hot";
+  const isHomePage = pathname === "/" || pathname === "/hot";
+  const isShortsPage = pathname === "/shorts";
   const bubbleMessage = isHotPage ? "전체 게시물 볼래!" : "핫게시물 볼래!";
   const targetPath = isHotPage ? "/" : "/hot";
   
   // Pages that need back button (AI 레시피, 리워드, 검색, 레시피 상세, 다른 유저 프로필, 유저 게시물, 프로필 피드 뷰, 팔로잉 리스트, 팔로워 리스트)
-  const needsBackButton = ["/rewards", "/ai-recipe", "/search", "/following/list", "/followers"].includes(location.pathname) || 
-                          location.pathname.startsWith("/post/") ||
-                          location.pathname.startsWith("/user/") ||
-                          (location.pathname === "/profile" && location.search.includes("view=feed"));
+  const needsBackButton = ["/rewards", "/ai-recipe", "/search", "/following/list", "/followers"].includes(pathname) || 
+                          pathname.startsWith("/post/") ||
+                          pathname.startsWith("/user/") ||
+                          (pathname === "/profile" && searchParams.get("view") === "feed");
   
   const navItems = [
     { path: "/", icon: Home, label: "홈" },
@@ -62,7 +68,7 @@ export default function Layout() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
       setSearchQuery("");
     }
@@ -77,14 +83,14 @@ export default function Layout() {
           <div className="flex items-center gap-2 ml-2">
             <button 
               className="p-2 transition-transform duration-200 group"
-              onClick={() => navigate("/ai-recipe")}
+              onClick={() => router.push("/ai-recipe")}
             >
               <Sparkles className="h-5 w-5 group-hover:animate-[sparkle_0.8s_ease-in-out]" />
             </button>
 
             <button 
               className="p-2 transition-transform duration-200 group"
-              onClick={() => navigate("/rewards")}
+              onClick={() => router.push("/rewards")}
             >
               <Award className="h-5 w-5 group-hover:animate-[award-shine_0.8s_ease-in-out]" />
             </button>
@@ -95,9 +101,9 @@ export default function Layout() {
                 onClick={() => {
                   // 프로필 피드 뷰에서는 그리드로 돌아가기
                   if (location.pathname === "/profile" && location.search.includes("view=feed")) {
-                    navigate("/profile");
+                    router.push("/profile");
                   } else {
-                    navigate(-1);
+                    router.back();
                   }
                 }}
               >
@@ -113,7 +119,7 @@ export default function Layout() {
                 className="cursor-pointer transition-transform duration-200 hover:scale-110"
                 onMouseEnter={() => isHomePage && setShowSpeechBubble(true)}
                 onMouseLeave={() => setShowSpeechBubble(false)}
-                onClick={() => !isHomePage && navigate("/")}
+                onClick={() => !isHomePage && router.push("/")}
               >
                 <img src={isHotPage ? naosIcon : logo} alt="Logo" className="h-16 w-auto" />
               </button>
@@ -130,7 +136,7 @@ export default function Layout() {
                       animation: 'bubble-pulse 2s ease-in-out infinite'
                     }}
                     onClick={() => {
-                      navigate(targetPath);
+                      router.push(targetPath);
                       setShowSpeechBubble(false);
                     }}
                   >
@@ -182,10 +188,10 @@ export default function Layout() {
           
           {/* 우측: 검색 */}
           <div className="flex items-center gap-2 mr-2">
-            {location.pathname !== "/search" && (
+            {pathname !== "/search" && (
               <button 
                 className="p-2 transition-transform duration-200 group"
-                onClick={() => navigate("/search")}
+                onClick={() => router.push("/search")}
               >
                 <SearchIcon className="h-5 w-5 group-hover:animate-[search-zoom_0.6s_ease-in-out]" />
               </button>
@@ -196,68 +202,64 @@ export default function Layout() {
 
       {/* Main Content */}
       <main className={`flex-1 pb-16 ${isShortsPage ? 'bg-black' : ''}`}>
-        <Outlet />
+        {children}
       </main>
 
       {/* Bottom Navigation */}
       <nav className={`fixed bottom-0 left-0 right-0 z-50 shadow-lg ${isShortsPage ? 'bg-black' : 'bg-background'}`}>
         <div className="flex h-16 items-center justify-around px-2">
-          {navItems.map(({ path, icon: Icon, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all group`
-              }
-            >
-              {({ isActive }) => {
-                const getAnimationClass = () => {
-                  switch(path) {
-                    case '/': return 'group-hover:animate-[home-bounce_0.8s_ease-in-out]';
-                    case '/shorts': return 'group-hover:animate-[user-wave_0.55s_ease-in-out]';
-                    case '/upload': return 'group-hover:animate-[plus-pop_0.6s_ease-in-out]';
-                    case '/following': return 'group-hover:animate-[heart-beat_0.8s_ease-in-out]';
-                    case '/profile': return 'group-hover:animate-[play-pulse_0.8s_ease-in-out]';
-                    default: return '';
-                  }
-                };
-                
-                return (
-                  <>
-                    {path === '/shorts' && isActive && isShortsPage ? (
-                      <svg 
-                        className={`h-6 w-6 ${getAnimationClass()}`}
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="white" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                      >
-                        <rect width="18" height="18" x="3" y="3" rx="2" fill="white" stroke="white"/>
-                        <polygon points="10 8 16 12 10 16 10 8" fill="black" stroke="none"/>
-                      </svg>
-                    ) : (
-                      <Icon 
-                        className={`h-6 w-6 ${
-                          isShortsPage 
-                            ? "text-white"
-                            : (isActive ? "text-mocha" : "text-muted-foreground")
-                        } ${getAnimationClass()}`}
-                      />
-                    )}
-                    <span className={`text-xs font-medium ${
-                      isShortsPage 
-                        ? "text-white" 
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = pathname === path; // 현재 페이지가 활성화되었는지 확인
+
+            const getAnimationClass = () => { // 함수 선언도 블록 내에서 처리
+                switch(path) {
+                  case '/': return 'group-hover:animate-[home-bounce_0.8s_ease-in-out]';
+                  case '/shorts': return 'group-hover:animate-[user-wave_0.55s_ease-in-out]';
+                  case '/upload': return 'group-hover:animate-[plus-pop_0.6s_ease-in-out]';
+                  case '/following': return 'group-hover:animate-[heart-beat_0.8s_ease-in-out]';
+                  case '/profile': return 'group-hover:animate-[play-pulse_0.8s_ease-in-out]';
+                  default: return '';
+                }
+              };
+
+            return (
+              <Link
+                key={path}
+                href={path}
+                className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all group"
+              >
+                {path === '/shorts' && isActive && isShortsPage ? (
+                    <svg 
+                    className={`h-6 w-6 ${getAnimationClass()}`}
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    >
+                    <rect width="18" height="18" x="3" y="3" rx="2" fill="white" stroke="white"/>
+                    <polygon points="10 8 16 12 10 16 10 8" fill="black" stroke="none"/>
+                    </svg>
+                ) : (
+                    <Icon 
+                    className={`h-6 w-6 ${
+                        isShortsPage 
+                        ? "text-white"
                         : (isActive ? "text-mocha" : "text-muted-foreground")
-                    }`}>
-                    {label}
-                    </span>
-                  </>
-                );
-              }}
-            </NavLink>
-          ))}
+                    } ${getAnimationClass()}`}
+                    />
+                )}
+                <span className={`text-xs font-medium ${
+                    isShortsPage 
+                    ? "text-white" 
+                    : (isActive ? "text-mocha" : "text-muted-foreground")
+                }`}>
+                {label}
+                </span>
+            </Link>
+            );
+          })}
         </div>
       </nav>
     </div>
