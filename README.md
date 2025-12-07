@@ -12,6 +12,7 @@
  | [GitHub](https://github.com/monimoni12) |
  
  <br/>
+ [2차보고서](https://www.canva.com/design/DAG4dwHqDnk/_DvqoXL30weUYLYIfTMLkg/edit?utm_content=DAG4dwHqDnk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
  <br/>
 
 ---
