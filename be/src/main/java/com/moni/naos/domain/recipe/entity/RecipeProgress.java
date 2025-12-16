@@ -36,7 +36,6 @@ public class RecipeProgress {
     @JoinColumn(name = "recipe_id")
     private Recipe recipe;
 
-    // (선택) 현재 진행 중인 Cooking 세션 참조 — 추적용
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cooking_id")
     private Cooking cooking;
@@ -44,14 +43,17 @@ public class RecipeProgress {
     @Column(nullable = false)
     private Integer totalSteps;
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer progressStep = 0;
 
+    @Builder.Default
     @Column(nullable = false, updatable = false)
     private Instant startedAt = Instant.now();
 
     private Instant completedAt;
 
+    @Builder.Default
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
