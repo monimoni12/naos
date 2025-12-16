@@ -36,11 +36,13 @@ public class Cooking {
     @JoinColumn(name = "recipe_id")
     private Recipe recipe;
 
+    @Builder.Default
     @Column(nullable = false, updatable = false)
     private Instant startedAt = Instant.now();
 
     private Instant endedAt;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean active = true;
 

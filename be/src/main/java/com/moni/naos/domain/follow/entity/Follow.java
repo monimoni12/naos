@@ -12,9 +12,11 @@ public class Follow {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="follower_id")
+    /** 팔로우하는 사람 (나) */
+    @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="follower_id", nullable = false)
     private User follower;
 
-    @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="followee_id")
+    /** 팔로우 당하는 사람 (상대) */
+    @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="followee_id", nullable = false)
     private User followee;
 }
