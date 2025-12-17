@@ -1,34 +1,40 @@
-import { useNavigate, useParams } from "react-router-dom";
+"use client";
+
+/**
+ * 팔로잉 목록 페이지
+ * 위치: src/app/(main)/user/[username]/following/page.tsx
+ */
+
 import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUser } from "@/lib/auth";
+import {
+  getProfileByUsername,
+  getFollowing,
+  toggleFollow,
+} from "@/features/profile/api";
+import type { FollowUserResponse } from "@/features/profile/types";
 
-interface FollowingUser {
-  id: string;
-  user_id: string;
-  username: string;
-  avatar_url: string;
-  bio: string | null;
-}
+export default function FollowingPage() {
+  const router = useRouter();
+  const params = useParams();
+  const username = params.username as string;
 
-export default function FollowingList() {
-  const navigate = useNavigate();
-  const { username } = useParams();
-  const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
+  const [following, setFollowing] = useState<FollowUserResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadFollowingUsers();
+    loadFollowing();
   }, [username]);
 
-  const loadFollowingUsers = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      setCurrentUserId(session.user.id);
+  const loadFollowing = async () => {
+    const user = getUser();
+    if (user) {
+      setCurrentUserId(user.id);
     }
 
     if (!username) {
@@ -36,100 +42,112 @@ export default function FollowingList() {
       return;
     }
 
-    // Get target user's user_id from username
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("username", username)
-      .single();
+    try {
+      // username으로 프로필 조회해서 userId 얻기
+      const profile = await getProfileByUsername(username);
+      if (!profile?.userId) {
+        setLoading(false);
+        return;
+      }
 
-    if (!profileData) {
+      // 팔로잉 목록 조회
+      const followingData = await getFollowing(profile.userId);
+      setFollowing(followingData);
+    } catch (error) {
+      console.error("Failed to load following:", error);
+      toast.error("팔로잉 목록을 불러올 수 없습니다");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Get list of users the target user is following
-    const { data: followsData } = await supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", profileData.user_id);
-
-    if (!followsData || followsData.length === 0) {
-      setFollowingUsers([]);
-      setLoading(false);
-      return;
-    }
-
-    const followingIds = followsData.map(f => f.following_id);
-
-    // Get profiles of followed users
-    const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("*")
-      .in("user_id", followingIds);
-
-    if (profilesData) {
-      setFollowingUsers(profilesData);
-    }
-
-    setLoading(false);
   };
 
-  const handleUnfollow = async (userId: string) => {
+  const handleUnfollow = async (targetUserId: number, index: number) => {
     if (!currentUserId) return;
 
-    const { error } = await supabase
-      .from("follows")
-      .delete()
-      .eq("follower_id", currentUserId)
-      .eq("following_id", userId);
-
-    if (!error) {
-      toast.success("언팔로우했습니다");
-      setFollowingUsers(followingUsers.filter(u => u.user_id !== userId));
+    try {
+      const result = await toggleFollow(targetUserId);
+      if (!result.following) {
+        // 언팔로우 성공 시 목록에서 제거
+        setFollowing((prev) => prev.filter((_, i) => i !== index));
+        toast.success("언팔로우했습니다");
+      }
+    } catch (error) {
+      toast.error("언팔로우에 실패했습니다");
     }
   };
+
+  const handleToggleFollow = async (targetUserId: number, index: number) => {
+    if (!currentUserId) {
+      toast.error("로그인이 필요합니다");
+      router.push("/auth");
+      return;
+    }
+
+    try {
+      const result = await toggleFollow(targetUserId);
+      // 팔로우 상태 업데이트
+      setFollowing((prev) =>
+        prev.map((user, i) =>
+          i === index ? { ...user, isFollowing: result.following } : user
+        )
+      );
+      toast.success(result.following ? "팔로우했습니다" : "언팔로우했습니다");
+    } catch (error) {
+      toast.error("팔로우 처리에 실패했습니다");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container max-w-2xl mx-auto px-4 py-6">
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto px-4 py-6">
-        {loading ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground">로딩 중...</p>
-          </div>
-        ) : followingUsers.length > 0 ? (
+        {following.length > 0 ? (
           <div className="space-y-4">
-            {followingUsers.map((user) => (
+            {following.map((user, index) => (
               <div
-                key={user.id}
+                key={user.userId}
                 className="bg-card rounded-xl p-4 shadow-[var(--shadow-card)] flex items-center justify-between"
               >
-                <div 
+                <div
                   className="flex items-center gap-3 flex-1 cursor-pointer"
-                  onClick={() => navigate(`/user/${user.username}`)}
+                  onClick={() => router.push(`/user/${user.username}`)}
                 >
                   <Avatar className="h-12 w-12 ring-2 ring-mocha/10">
-                    <AvatarImage src={user.avatar_url} />
+                    <AvatarImage src={user.avatarUrl || undefined} />
                     <AvatarFallback className="bg-mocha/20 text-mocha font-bold">
-                      {user.username[0]}
+                      {user.username?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-semibold">{user.username}</p>
+                    <p className="font-semibold">{user.fullName || user.username}</p>
+                    <p className="text-sm text-muted-foreground">@{user.username}</p>
                     {user.bio && (
-                      <p className="text-sm text-muted-foreground line-clamp-1">
+                      <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
                         {user.bio}
                       </p>
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleUnfollow(user.user_id)}
-                >
-                  팔로잉
-                </Button>
+                {currentUserId && currentUserId !== user.userId && (
+                  <Button
+                    variant={user.isFollowing ? "outline" : "mocha"}
+                    size="sm"
+                    onClick={() => handleToggleFollow(user.userId, index)}
+                  >
+                    {user.isFollowing ? "팔로잉" : "팔로우"}
+                  </Button>
+                )}
               </div>
             ))}
           </div>

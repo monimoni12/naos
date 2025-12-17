@@ -1,105 +1,69 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import RecipeCard from "@/features/recipes/components/RecipeCard";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useFeed, RecipeCard } from '@/features/feed';
+import { isLoggedIn } from '@/lib/auth';
 
-export default function Following() {
+export default function FollowingPage() {
   const router = useRouter();
-  const [recipes, setRecipes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const {
+    items,
+    loading,
+    loadingMore,
+    error,
+    hasNext,
+    loadMore,
+    toggleLike,
+    toggleBookmark,
+    toggleFollow,
+    deleteRecipe,
+  } = useFeed({ mode: 'following' });
 
   useEffect(() => {
-    const loadFollowingRecipes = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/auth");
-        return;
-      }
-
-      setCurrentUserId(session.user.id);
-
-      // Get list of users the current user is following
-      const { data: followsData } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", session.user.id);
-
-      if (!followsData || followsData.length === 0) {
-        setRecipes([]);
-        setLoading(false);
-        return;
-      }
-
-      const followingIds = followsData.map(f => f.following_id);
-
-      // Get recipes from followed users
-      const { data: recipesData } = await supabase
-        .from("recipes")
-        .select("*")
-        .in("user_id", followingIds)
-        .order("created_at", { ascending: false });
-
-      if (recipesData && recipesData.length > 0) {
-        const userIds = [...new Set(recipesData.map((r: any) => r.user_id))];
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, username, avatar_url")
-          .in("user_id", userIds);
-
-        const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
-
-        const formattedRecipes = recipesData.map((recipe: any) => {
-          const profile = profilesMap.get(recipe.user_id);
-          return {
-            id: recipe.id,
-            author: {
-              name: profile?.username || "Unknown",
-              avatar: profile?.avatar_url,
-              isFollowing: true,
-              userId: recipe.user_id,
-            },
-            images: recipe.image_url && recipe.video_url ? [recipe.image_url, recipe.video_url] : recipe.video_url ? [recipe.video_url] : recipe.image_url ? [recipe.image_url] : [],
-            title: recipe.title,
-            description: recipe.description || "",
-            likes: recipe.likes_count || 0,
-            comments: recipe.comments_count || 0,
-            timestamp: new Date(recipe.created_at).toLocaleDateString('ko-KR'),
-            steps: recipe.steps,
-            fromFollowing: true,
-          };
-        });
-
-        setRecipes(formattedRecipes);
-      }
-
-      setLoading(false);
-    };
-
-    loadFollowingRecipes();
+    if (!isLoggedIn()) {
+      router.push('/auth');
+    }
   }, [router]);
 
   return (
-    <div className="container max-w-2xl mx-auto px-4 py-6">
+    <div className="container max-w-2xl mx-auto px-4 py-6 pb-32">
       {loading ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">로딩 중...</p>
         </div>
-      ) : recipes.length > 0 ? (
-        recipes.map((recipe) => (
-          <RecipeCard 
-            key={recipe.id} 
-            {...recipe} 
-            currentUserId={currentUserId || undefined}
-          />
-        ))
+      ) : error ? (
+        <div className="text-center py-16">
+          <p className="text-destructive">{error}</p>
+        </div>
+      ) : items.length > 0 ? (
+        <>
+          {items.map((item) => (
+            <RecipeCard
+              key={item.id}
+              item={item}
+              onLikeChange={(liked, count) => toggleLike(item.id)}
+              onBookmarkChange={(bookmarked) => toggleBookmark(item.id)}
+              onFollowChange={(following) => toggleFollow(item.authorId)}
+              onDelete={deleteRecipe}
+            />
+          ))}
+          
+          {hasNext && (
+            <div className="text-center py-4">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="text-sm text-mocha hover:underline disabled:opacity-50"
+              >
+                {loadingMore ? '불러오는 중...' : '더 보기'}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-16">
-          <p className="text-muted-foreground mb-4">
-            아직 팔로우한 사람이 없습니다
-          </p>
+          <p className="text-muted-foreground mb-4">아직 팔로우한 사람이 없습니다</p>
           <p className="text-sm text-muted-foreground">
             홈 피드에서 관심있는 레시피를 찾아보세요!
           </p>
