@@ -1,3 +1,10 @@
+"use client";
+
+/**
+ * 썸네일 선택 단계
+ * 위치: src/features/upload/components/ThumbnailSelectorStep.tsx
+ */
+
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +15,12 @@ interface ThumbnailSelectorStepProps {
   previewUrl: string;
   onBack: () => void;
   onNext: (thumbnailTime: number, blob: Blob) => void;
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 export default function ThumbnailSelectorStep({
@@ -25,7 +38,7 @@ export default function ThumbnailSelectorStep({
   useEffect(() => {
     if (file?.type.startsWith("video") && videoRef.current) {
       const video = videoRef.current;
-      
+
       video.onloadedmetadata = () => {
         setDuration(video.duration);
         captureThumbnail(0);
@@ -36,7 +49,7 @@ export default function ThumbnailSelectorStep({
   const captureThumbnail = (time: number) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     if (!video || !canvas) return;
 
     const ctx = canvas.getContext("2d");
@@ -80,33 +93,35 @@ export default function ThumbnailSelectorStep({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        onNext(currentTime, blob);
-      }
-    }, 'image/jpeg', 0.95);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          onNext(currentTime, blob);
+        }
+      },
+      "image/jpeg",
+      0.95
+    );
   };
 
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6">
-      <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+      <div className="bg-card rounded-xl shadow-md overflow-hidden">
+        {/* Header */}
         <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold">섬네일 선택</h1>
+          <h1 className="text-2xl font-bold">썸네일 선택</h1>
           <p className="text-muted-foreground mt-1">
-            영상 중 섬네일로 사용할 장면을 선택하세요
+            영상 중 썸네일로 사용할 장면을 선택하세요
           </p>
         </div>
 
+        {/* Content */}
         <div className="p-6 space-y-6">
           {/* Video Preview */}
           <div>
-            <Label className="text-base font-semibold mb-3 block">미리보기</Label>
+            <Label className="text-base font-semibold mb-3 block">
+              미리보기
+            </Label>
             <div className="aspect-video bg-black rounded-lg overflow-hidden">
               {file?.type.startsWith("video") ? (
                 <video
@@ -119,7 +134,11 @@ export default function ThumbnailSelectorStep({
                   onSeeked={handleSeek}
                 />
               ) : (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                />
               )}
             </div>
             <canvas ref={canvasRef} className="hidden" />
@@ -129,7 +148,8 @@ export default function ThumbnailSelectorStep({
           {file?.type.startsWith("video") && (
             <div className="bg-muted/50 rounded-lg p-4 border border-border">
               <p className="text-sm text-muted-foreground">
-                영상을 재생하고 원하는 장면에서 일시정지하거나 시크바를 움직여 섬네일로 사용할 장면을 선택하세요.
+                영상을 재생하고 원하는 장면에서 일시정지하거나 시크바를 움직여
+                썸네일로 사용할 장면을 선택하세요.
               </p>
             </div>
           )}
@@ -138,9 +158,9 @@ export default function ThumbnailSelectorStep({
           {thumbnailPreview && file?.type.startsWith("video") && (
             <div className="flex flex-col items-center">
               <Label className="text-base font-semibold mb-3 block self-start">
-                선택된 섬네일 ({formatTime(currentTime)})
+                선택된 썸네일 ({formatTime(currentTime)})
               </Label>
-              <div className="relative aspect-video rounded-lg overflow-hidden shadow-[0_0_30px_rgba(139,111,78,0.6)] max-w-xs w-full">
+              <div className="relative aspect-video rounded-lg overflow-hidden shadow-lg max-w-xs w-full ring-2 ring-primary/30">
                 <img
                   src={thumbnailPreview}
                   alt="Selected thumbnail"
@@ -154,13 +174,13 @@ export default function ThumbnailSelectorStep({
           )}
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div className="p-6 border-t bg-muted/30 flex gap-3 justify-between">
           <Button variant="outline" size="lg" onClick={onBack}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             이전
           </Button>
-          <Button variant="mocha" size="lg" className="px-8" onClick={handleNext}>
+          <Button size="lg" className="px-8" onClick={handleNext}>
             다음
           </Button>
         </div>

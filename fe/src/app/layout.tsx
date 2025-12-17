@@ -1,21 +1,13 @@
-import type { Metadata } from "next";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "next-themes";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
+import '@/styles/globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "NAOS - 레시피 공유 플랫폼",
-  description: "맛있는 레시피를 공유하고 발견하세요",
-  authors: [{ name: "moni" }],
-  openGraph: {
-    title: "NAOS - 레시피 공유 플랫폼",
-    description: "맛있는 레시피를 공유하고 발견하세요",
-    images: ["/naos-thumbnail.png"],
-  },
+  title: 'NAOS - 건강한 레시피 플랫폼',
+  description: '요리와 영상의 병행이 어려운 문제를 해결하는 혁신적 요리 플랫폼',
 };
 
 export default function RootLayout({
@@ -24,22 +16,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
-      <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <QueryClientProvider client={queryClient}>
-            <TooltipProvider>
-              {children}
-              <Toaster />
-              <Sonner />
-            </TooltipProvider>
-          </QueryClientProvider>
-        </ThemeProvider>
+    <html lang="ko">
+      <body className={inter.className}>
+        {children}
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

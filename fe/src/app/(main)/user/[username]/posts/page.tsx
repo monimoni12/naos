@@ -1,96 +1,101 @@
-import { useNavigate, useParams } from "react-router-dom";
-import RecipeCard from "@/features/recipes/components/RecipeCard";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+"use client";
 
-export default function UserPosts() {
-  const navigate = useNavigate();
-  const { username } = useParams();
+/**
+ * 유저 게시물 피드 페이지
+ * 위치: src/app/(main)/user/[username]/posts/page.tsx
+ */
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
+import { RecipeCard } from "@/features/feed/components";
+import {
+  getProfileByUsername,
+  getUserRecipes,
+} from "@/features/profile/api";
+import { toFeedItem } from "@/features/profile/utils";
+import type { ProfileResponse } from "@/features/profile/types";
+
+export default function UserPostsPage() {
+  const params = useParams();
+  const username = params.username as string;
+
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [recipes, setRecipes] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserPosts = async () => {
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id || null);
+      if (!username) {
+        setLoading(false);
+        return;
+      }
 
-      if (!username) return;
-
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .single();
-
-      if (profileData) {
+      try {
+        // Load user profile
+        const profileData = await getProfileByUsername(username);
         setProfile(profileData);
 
         // Load user's recipes
-        const { data: recipesData } = await supabase
-          .from("recipes")
-          .select("*")
-          .eq("user_id", profileData.user_id)
-          .order("created_at", { ascending: false });
-
-        if (recipesData) {
-          const formattedRecipes = recipesData.map((recipe: any) => ({
+        if (profileData?.userId) {
+          const userRecipes = await getUserRecipes(profileData.userId);
+          const formattedRecipes = userRecipes.map((recipe) => ({
             id: recipe.id,
-            author: {
-              name: profileData.username,
-              avatar: profileData.avatar_url,
-              isFollowing: false,
-              userId: profileData.user_id,
-            },
-            images: recipe.image_url && recipe.video_url ? [recipe.image_url, recipe.video_url] : recipe.video_url ? [recipe.video_url] : recipe.image_url ? [recipe.image_url] : [],
-            title: recipe.title,
+            title: recipe.title || "",
             description: recipe.description || "",
-            likes: recipe.likes_count || 0,
-            comments: recipe.comments_count || 0,
-            timestamp: new Date(recipe.created_at).toLocaleDateString('ko-KR'),
-            steps: recipe.steps,
+            imageUrl: recipe.thumbnailUrl || recipe.imageUrl,
+            videoUrl: recipe.videoUrl,
+            thumbnailUrl: recipe.thumbnailUrl,
+            authorId: profileData.userId,
+            likesCount: recipe.likesCount || 0,
+            commentsCount: recipe.commentsCount || 0,
+            createdAt: recipe.createdAt,
+            steps: recipe.clips || [],
           }));
           setRecipes(formattedRecipes);
         }
+      } catch (_) {
+        toast.error("게시물을 불러올 수 없습니다");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     loadUserPosts();
   }, [username]);
 
-  const handleDelete = async (recipeId: string) => {
-    const { error } = await supabase
-      .from("recipes")
-      .delete()
-      .eq("id", recipeId);
-
-    if (!error) {
-      setRecipes(recipes.filter(r => r.id !== recipeId));
-    }
+  const handleDelete = (id: number) => {
+    // TODO: 삭제 API 호출
+    setRecipes(recipes.filter((r) => r.id !== id));
+    toast.success("레시피가 삭제되었습니다");
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Posts Feed */}
-      <div className="container max-w-2xl mx-auto px-4 py-6">
-        {loading ? (
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container max-w-2xl mx-auto px-4 py-6">
           <div className="text-center py-16">
             <p className="text-muted-foreground">로딩 중...</p>
           </div>
-        ) : recipes.length > 0 ? (
-          recipes.map((post) => (
-            <RecipeCard 
-              key={post.id} 
-              {...post} 
-              currentUserId={currentUserId || undefined}
-              onDelete={handleDelete}
-            />
-          ))
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-2xl mx-auto px-4 py-6">
+        {recipes.length > 0 ? (
+          <div className="space-y-6">
+            {recipes.map((recipe) => (
+              <RecipeCard
+                key={recipe.id}
+                item={toFeedItem(recipe, profile)}
+                clips={recipe.steps || []}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         ) : (
           <div className="text-center py-16 bg-card rounded-xl">
             <p className="text-muted-foreground">게시물이 없습니다</p>

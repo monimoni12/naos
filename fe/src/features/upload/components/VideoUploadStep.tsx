@@ -1,3 +1,10 @@
+"use client";
+
+/**
+ * 비디오/이미지 업로드 단계
+ * 위치: src/features/upload/components/VideoUploadStep.tsx
+ */
+
 import { Video, Image as ImageIcon, UploadIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +25,8 @@ export default function VideoUploadStep({
 }: VideoUploadStepProps) {
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6">
-      <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+      <div className="bg-card rounded-xl shadow-md overflow-hidden">
+        {/* Header */}
         <div className="p-6 border-b">
           <h1 className="text-2xl font-bold">새 레시피 올리기</h1>
           <p className="text-muted-foreground mt-1">
@@ -26,6 +34,7 @@ export default function VideoUploadStep({
           </p>
         </div>
 
+        {/* Content */}
         <div className="p-6">
           {!file ? (
             <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
@@ -75,9 +84,10 @@ export default function VideoUploadStep({
           )}
         </div>
 
+        {/* Footer */}
         {file && (
           <div className="p-6 border-t bg-muted/30 flex gap-3 justify-end">
-            <Button variant="mocha" size="lg" className="px-8" onClick={onNext}>
+            <Button size="lg" className="px-8" onClick={onNext}>
               다음
             </Button>
           </div>
