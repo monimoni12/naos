@@ -43,7 +43,6 @@ public class RecipeService {
 
     /**
      * Step 1: 임시 레시피 생성 (DRAFT)
-     * - 영상 업로드 직후 최소 정보만 저장
      */
     @Transactional
     public RecipeResponse createDraft(Long userId, DraftCreateRequest req) {
@@ -53,7 +52,7 @@ public class RecipeService {
         Recipe recipe = Recipe.builder()
                 .author(author)
                 .title(req.getTitle() != null ? req.getTitle() : "임시 저장")
-                .visibility(Recipe.Visibility.PRIVATE)  // DRAFT 대용
+                .visibility(Recipe.Visibility.PRIVATE)
                 .build();
 
         Recipe saved = recipeRepository.save(recipe);
@@ -70,12 +69,11 @@ public class RecipeService {
 
         log.info("Draft 레시피 생성: id={}, userId={}", saved.getId(), userId);
         
-        return RecipeResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     /**
      * Step 2: 클립 정보 저장
-     * - 프론트에서 클리핑 완료 후 각 클립의 startSec, endSec, description 전달
      */
     @Transactional
     public RecipeResponse saveClips(Long userId, Long recipeId, List<ClipCreateRequest> clips) {
@@ -98,11 +96,12 @@ public class RecipeService {
         }
 
         log.info("클립 저장 완료: recipeId={}, clipCount={}", recipeId, clips.size());
-        return RecipeResponse.fromEntity(recipe);
+        
+        return toResponse(recipe);
     }
 
     /**
-     * Step 3: 썸네일 설정 (RecipeAsset으로 저장)
+     * Step 3: 썸네일 설정
      */
     @Transactional
     public RecipeResponse setThumbnail(Long userId, Long recipeId, AssetRequest req) {
@@ -121,7 +120,8 @@ public class RecipeService {
         recipeAssetRepository.save(thumbnail);
 
         log.info("썸네일 설정: recipeId={}, url={}", recipeId, req.getUrl());
-        return RecipeResponse.fromEntity(recipe);
+        
+        return toResponse(recipe);
     }
 
     /**
@@ -146,7 +146,7 @@ public class RecipeService {
         Recipe saved = recipeRepository.save(recipe);
         log.info("상세 정보 저장: recipeId={}", recipeId);
         
-        return RecipeResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     /**
@@ -176,7 +176,8 @@ public class RecipeService {
         Recipe saved = recipeRepository.save(recipe);
 
         log.info("레시피 발행: recipeId={}", recipeId);
-        return RecipeResponse.fromEntity(saved);
+        
+        return toResponse(saved);
     }
 
     // ==================== 기본 CRUD ====================
@@ -197,20 +198,20 @@ public class RecipeService {
                 .visibility(Recipe.Visibility.PUBLIC)
                 .build();
 
-        return RecipeResponse.fromEntity(recipeRepository.save(recipe));
+        return toResponse(recipeRepository.save(recipe));
     }
 
     public List<RecipeResponse> getAllRecipes() {
         return recipeRepository.findByVisibilityOrderByCreatedAtDesc(Recipe.Visibility.PUBLIC)
                 .stream()
-                .map(RecipeResponse::fromEntity)
+                .map(this::toResponse)
                 .toList();
     }
 
     public RecipeResponse getRecipeById(Long id) {
         Recipe recipe = recipeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("레시피를 찾을 수 없습니다: " + id));
-        return RecipeResponse.fromEntity(recipe);
+        return toResponse(recipe);
     }
 
     @Transactional
@@ -229,7 +230,7 @@ public class RecipeService {
         recipe.setHideShareCount(req.isHideShareCount());
         recipe.setDisableComments(req.isDisableComments());
 
-        return RecipeResponse.fromEntity(recipeRepository.save(recipe));
+        return toResponse(recipeRepository.save(recipe));
     }
 
     @Transactional
@@ -245,7 +246,21 @@ public class RecipeService {
 
         return recipeRepository.findByAuthorAndVisibilityOrderByCreatedAtDesc(author, Recipe.Visibility.PUBLIC)
                 .stream()
-                .map(RecipeResponse::fromEntity)
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * 특정 유저의 모든 레시피 조회 (PUBLIC + PRIVATE)
+     * - 프로필 페이지용
+     */
+    public List<RecipeResponse> getAllByAuthor(Long userId) {
+        User author = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        return recipeRepository.findByAuthorOrderByCreatedAtDesc(author)
+                .stream()
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -255,14 +270,14 @@ public class RecipeService {
 
         return recipeRepository.findByAuthorAndVisibilityOrderByCreatedAtDesc(author, Recipe.Visibility.PRIVATE)
                 .stream()
-                .map(RecipeResponse::fromEntity)
+                .map(this::toResponse)
                 .toList();
     }
 
     public List<RecipeResponse> getByCategory(String category) {
         return recipeRepository.findByCategoryAndVisibilityOrderByCreatedAtDesc(category, Recipe.Visibility.PUBLIC)
                 .stream()
-                .map(RecipeResponse::fromEntity)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -270,7 +285,7 @@ public class RecipeService {
         // TODO: 팔로잉 유저의 레시피만 가져오기
         return recipeRepository.findByVisibilityOrderByCreatedAtDesc(Recipe.Visibility.PUBLIC, PageRequest.of(page, size))
                 .stream()
-                .map(RecipeResponse::fromEntity)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -285,5 +300,13 @@ public class RecipeService {
         }
 
         return recipe;
+    }
+
+    /**
+     * Recipe → RecipeResponse 변환 (assets 포함)
+     */
+    private RecipeResponse toResponse(Recipe recipe) {
+        List<RecipeAsset> assets = recipeAssetRepository.findByRecipe(recipe);
+        return RecipeResponse.fromEntity(recipe, assets);
     }
 }
