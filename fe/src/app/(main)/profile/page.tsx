@@ -1,13 +1,11 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 /**
  * 내 프로필 페이지
  * 위치: src/app/(main)/profile/page.tsx
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Grid, Bookmark, PlaySquare, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +32,7 @@ import type {
 } from '@/features/profile/types';
 import { RecipeCard } from '@/features/feed/components';
 
-export default function ProfilePage() {
+function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -42,8 +40,8 @@ export default function ProfilePage() {
   // State
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [userRecipes, setUserRecipes] = useState<any[]>([]);
-  const [savedRecipes, setSavedRecipes] = useState<any[]>([]); // ⭐ 추가
-  const [cookingRecipes, setCookingRecipes] = useState<any[]>([]); // ⭐ 추가
+  const [savedRecipes, setSavedRecipes] = useState<any[]>([]);
+  const [cookingRecipes, setCookingRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -67,18 +65,15 @@ export default function ProfilePage() {
       }
 
       try {
-        // 프로필 로드
         const profileData = await getMyProfile();
         setProfile(profileData);
 
-        // 팔로워/팔로잉 수 로드
         if (profileData.userId) {
           const counts = await getFollowCounts(profileData.userId);
           setFollowersCount(counts.followerCount);
           setFollowingCount(counts.followingCount);
         }
 
-        // 내 레시피 로드
         const recipes = await getMyRecipes();
         const formattedRecipes = recipes.map((recipe) => ({
           id: recipe.id,
@@ -121,14 +116,12 @@ export default function ProfilePage() {
     router.replace('/profile?view=feed', { scroll: false });
   };
 
-  // ⭐ 추가: 북마크 레시피 클릭 핸들러
   const handleSavedRecipeClick = (recipeId: string, index: number) => {
     setSelectedRecipeIndex(index);
     setViewMode('feed');
     router.replace('/profile?view=feed', { scroll: false });
   };
 
-  // ⭐ 추가: 요리중 레시피 클릭 핸들러
   const handleCookingRecipeClick = (recipeId: string, index: number) => {
     setSelectedRecipeIndex(index);
     setViewMode('feed');
@@ -136,12 +129,10 @@ export default function ProfilePage() {
   };
 
   const handleDelete = (id: number) => {
-    // TODO: 삭제 API 호출
     setUserRecipes(userRecipes.filter((r) => r.id !== id));
     toast.success('레시피가 삭제되었습니다');
   };
 
-  // ⭐ 추가: 현재 탭에 따른 피드용 레시피 목록 반환
   const getFeedRecipes = () => {
     switch (activeTab) {
       case 'recipes':
@@ -166,17 +157,14 @@ export default function ProfilePage() {
     );
   }
 
-  // 비디오가 있는 레시피 (쇼츠)
   const videoRecipes = userRecipes.filter((r) => r.videoUrl);
 
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6">
       {viewMode === 'grid' ? (
         <>
-          {/* Profile Header */}
           <div className="bg-card rounded-xl shadow-[var(--shadow-card)] p-8">
             <div className="mb-6">
-              {/* 상단: 프로필 사진 (중앙 정렬) */}
               <div className="flex justify-center mb-4">
                 <Avatar className="h-24 w-24 ring-4 ring-mocha/20">
                   <AvatarImage src={profile?.avatarUrl || undefined} />
@@ -186,7 +174,6 @@ export default function ProfilePage() {
                 </Avatar>
               </div>
 
-              {/* 중앙: 닉네임 */}
               <div className="text-center mb-3">
                 <h1 className="text-xl font-bold">
                   {profile?.fullName || profile?.username || '내 닉네임'}
@@ -198,7 +185,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* 하단: 통계 (중앙 정렬) */}
               <div className="flex justify-center gap-16 mb-4">
                 <button
                   className="text-center cursor-pointer hover:opacity-70 transition-opacity"
@@ -229,7 +215,6 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {/* Bio */}
               {profile?.bio && (
                 <p className="text-sm text-center text-muted-foreground mb-4">
                   {profile.bio}
@@ -237,7 +222,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex gap-3 mb-6">
               <Button
                 className="flex-1"
@@ -255,7 +239,6 @@ export default function ProfilePage() {
               </Button>
             </div>
 
-            {/* Tabs */}
             <Tabs
               value={activeTab}
               onValueChange={handleTabChange}
@@ -327,7 +310,6 @@ export default function ProfilePage() {
           </div>
         </>
       ) : (
-        /* 피드 뷰 */
         <div className="space-y-6">
           {getFeedRecipes()
             .slice(selectedRecipeIndex)
@@ -348,5 +330,19 @@ export default function ProfilePage() {
         username={profile?.username || ''}
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      }
+    >
+      <ProfileContent />
+    </Suspense>
   );
 }
