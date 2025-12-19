@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * 내 프로필 페이지
  * 위치: src/app/(main)/profile/page.tsx
