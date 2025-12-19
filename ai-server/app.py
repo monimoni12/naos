@@ -232,7 +232,9 @@ def _notify_spring_no_audio(spring_url: str, recipe_id: int):
 @app.route('/api/gpt/cost-analysis', methods=['POST'])
 def analyze_cost():
     """
-    GPT 가성비 분석 - 레시피 데이터 → 가성비 점수
+    GPT 가성비 + 영양 분석 - 레시피 데이터 → 가성비 점수 + 영양 정보
+    
+    ⭐ 수정: analyze_cost_efficiency() → analyze_recipe_full()
     
     Request (Spring CostAnalysisRequest):
         {
@@ -246,7 +248,7 @@ def analyze_cost():
             "caloriesPerServing": 350
         }
     
-    Response (Spring CostAnalysisResult):
+    Response (Spring CostAnalysisResult - 영양 정보 포함):
         {
             "recipeId": 1,
             "overallScore": 85,
@@ -257,7 +259,15 @@ def analyze_cost():
                 "ingredientAccessibility": 85
             },
             "estimatedTotalCost": 2100,
-            "comment": "가격 대비 영양가가 높고..."
+            "comment": "가격 대비 영양가가 높고...",
+            "nutrition": {
+                "kcalEstimate": 450,
+                "proteinG": 35,
+                "carbsG": 45,
+                "fatG": 10,
+                "fiberG": 5,
+                "sodiumMg": 600
+            }
         }
     """
     try:
@@ -289,26 +299,50 @@ def analyze_cost():
             "difficulty": data.get('difficulty')
         }
         
-        # GPT 호출
-        result = gpt_service.analyze_cost_efficiency(internal_request)
+        # ⭐ 변경: analyze_cost_efficiency → analyze_recipe_full
+        # 가성비 + 영양 정보를 한 번에 분석
+        result = gpt_service.analyze_recipe_full(internal_request)
+        
+        # cost_efficiency 추출
+        cost_efficiency = result.get('cost_efficiency', {})
+        breakdown = cost_efficiency.get('breakdown', {})
+        
+        # nutrition 추출 (snake_case → camelCase 변환)
+        nutrition_raw = result.get('nutrition', {})
         
         # Spring CostAnalysisResult 형식으로 변환
-        breakdown = result.get('breakdown', {})
-        
-        return jsonify({
+        response = {
             "recipeId": data.get('recipeId'),
-            "overallScore": result.get('score', 0),
+            "overallScore": cost_efficiency.get('score', 0),
             "breakdown": {
                 "priceEfficiency": breakdown.get('price_efficiency', 0),
                 "timeEfficiency": breakdown.get('time_efficiency', 0),
                 "nutritionBalance": breakdown.get('nutrition_balance', 0),
                 "ingredientAccessibility": breakdown.get('accessibility', 0)
             },
-            "estimatedTotalCost": total_price,
-            "comment": result.get('summary', '')
-        })
+            "estimatedTotalCost": cost_efficiency.get('estimated_total_price', total_price),
+            "comment": cost_efficiency.get('summary', ''),
+            # ⭐ 추가: 영양 정보 (camelCase로 변환)
+            "nutrition": {
+                "kcalEstimate": nutrition_raw.get('kcal_estimate', 0),
+                "proteinG": nutrition_raw.get('protein_g', 0),
+                "carbsG": nutrition_raw.get('carbs_g', 0),
+                "fatG": nutrition_raw.get('fat_g', 0),
+                "fiberG": nutrition_raw.get('fiber_g', 0),
+                "sodiumMg": nutrition_raw.get('sodium_mg', 0)
+            }
+        }
+        
+        # 디버깅 로그
+        print(f"[DEBUG] Flask 응답: overallScore={response['overallScore']}")
+        print(f"[DEBUG] breakdown: {response['breakdown']}")
+        print(f"[DEBUG] nutrition: {response['nutrition']}")
+        
+        return jsonify(response)
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
@@ -380,7 +414,7 @@ if __name__ == '__main__':
     ║   - GET  /health                                              ║
     ║   - POST /api/whisper/transcribe        (전사만)              ║
     ║   - POST /api/whisper/transcribe-save   (전사 + Spring 저장)  ║
-    ║   - POST /api/gpt/cost-analysis                               ║
+    ║   - POST /api/gpt/cost-analysis         (가성비 + 영양 분석)  ║
     ║                                                               ║
     ║   Demucs: {'✅ 활성화' if whisper_service.use_demucs else '❌ 비활성화'}                                        ║
     ║   Spring URL: {SPRING_BASE_URL}                     ║
