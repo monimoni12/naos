@@ -25,4 +25,7 @@ public interface CookingRepository extends JpaRepository<Cooking, Long> {
 
     /** 유저의 완료된 요리 수 */
     long countByUserAndActiveFalse(User user);
+
+    // ⭐ 추가: 여러 활성 세션 목록 (최신순)
+    List<Cooking> findByUserAndActiveTrueOrderByStartedAtDesc(User user);
 }

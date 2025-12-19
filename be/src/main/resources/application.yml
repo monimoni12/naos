@@ -90,7 +90,7 @@ cloud:
       access-key: ""
       secret-key: ""
     s3:
-      bucket: naos-bucket
+      bucket: naos-media
     region:
       static: ap-northeast-2
     stack:

@@ -32,7 +32,7 @@ public class RecipeResponse {
     private boolean hideShareCount;
     private boolean disableComments;
     private Double scorePopular;
-    private Double scoreCost;
+    private Double costEfficiencyScore;  // 변경: scoreCost → costEfficiencyScore
     private String visibility;
     private boolean liked;
     private boolean bookmarked;
@@ -97,7 +97,7 @@ public class RecipeResponse {
                 .hideShareCount(recipe.isHideShareCount())
                 .disableComments(recipe.isDisableComments())
                 .scorePopular(recipe.getScorePopular())
-                .scoreCost(recipe.getScoreCost())
+                .costEfficiencyScore(recipe.getCostEfficiencyScore())  // 변경
                 .visibility(recipe.getVisibility().name())
                 .liked(false)
                 .bookmarked(false)

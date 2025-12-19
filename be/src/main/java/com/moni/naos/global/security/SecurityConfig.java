@@ -64,6 +64,10 @@ public class SecurityConfig {
                         // 레시피 조회 (공개)
                         .requestMatchers(HttpMethod.GET, "/api/recipes/**").permitAll()
                         
+                        // ⭐ 피드 조회 (공개 - 비로그인도 홈피드 볼 수 있음)
+                        .requestMatchers(HttpMethod.GET, "/api/feed/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feed").permitAll()
+                        
                         // 댓글 조회 (공개)
                         .requestMatchers(HttpMethod.GET, "/api/recipes/*/comments").permitAll()
                         
@@ -71,7 +75,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
                         
-                        // Swagger ⭐ /api-docs/** 추가
+                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

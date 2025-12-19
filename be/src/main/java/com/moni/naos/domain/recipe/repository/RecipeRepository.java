@@ -50,8 +50,8 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     @Query("SELECT r FROM Recipe r WHERE r.visibility = 'PUBLIC' ORDER BY r.scorePopular DESC NULLS LAST")
     List<Recipe> findAllOrderByPopularity(Pageable pageable);
 
-    @Query("SELECT r FROM Recipe r WHERE r.visibility = 'PUBLIC' ORDER BY r.scoreCost DESC NULLS LAST")
-    List<Recipe> findAllOrderByCostEfficiency(Pageable pageable);
+    @Query("SELECT r FROM Recipe r WHERE r.visibility = 'PUBLIC' ORDER BY r.costEfficiencyScore DESC NULLS LAST")
+    List<Recipe> findAllOrderByCostEfficiency(Pageable pageable);  // 변경: scoreCost → costEfficiencyScore
 
     // ==================== 피드 ====================
 

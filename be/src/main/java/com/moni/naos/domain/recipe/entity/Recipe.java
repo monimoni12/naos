@@ -5,6 +5,7 @@ import com.moni.naos.global.converter.StringListJsonConverter;
 import com.moni.naos.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -14,7 +15,7 @@ import java.util.List;
                 @Index(name="idx_recipe_author_created", columnList="author_id, createdAt DESC"),
                 @Index(name="idx_recipe_created",       columnList="createdAt DESC"),
                 @Index(name="idx_recipe_score_popular", columnList="scorePopular DESC"),
-                @Index(name="idx_recipe_score_cost",    columnList="scoreCost DESC")
+                @Index(name="idx_recipe_cost_efficiency", columnList="cost_efficiency_score DESC")
         })
 public class Recipe extends BaseEntity {
 
@@ -42,7 +43,7 @@ public class Recipe extends BaseEntity {
     private Integer priceEstimate;   // 1인분 추정 가격
     private Integer kcalEstimate;    // 1인분 추정 칼로리
 
-    // ⭐ 난이도 추가
+    // 난이도
     @Enumerated(EnumType.STRING) 
     @Column(length=10)
     private Difficulty difficulty;
@@ -64,8 +65,19 @@ public class Recipe extends BaseEntity {
     @Builder.Default
     private Double scorePopular = 0d;
     
+    @Column(name = "cost_efficiency_score")
     @Builder.Default
-    private Double scoreCost = 0d;
+    private Double costEfficiencyScore = 0d;  // 변경: scoreCost → costEfficiencyScore
+
+    // ==================== ⭐ 연관 관계 (Cascade 삭제) ====================
+    
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<RecipeAsset> assets = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<RecipeClip> clips = new ArrayList<>();
 
     // ==================== Enums ====================
 

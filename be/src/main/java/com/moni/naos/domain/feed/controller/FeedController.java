@@ -4,16 +4,15 @@ import com.moni.naos.domain.feed.dto.FeedFilterRequest;
 import com.moni.naos.domain.feed.dto.FeedItemDto;
 import com.moni.naos.domain.feed.service.FeedService;
 import com.moni.naos.domain.recipe.entity.Recipe;
-import com.moni.naos.domain.user.entity.User;
 import com.moni.naos.global.rsdata.ApiResponse;
 import com.moni.naos.global.rsdata.CursorPage;
-import com.moni.naos.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -24,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/feed?mode=following  : 팔로잉 피드
  * - GET /api/feed?mode=trending   : 트렌딩 피드 (인기순)
  * - GET /api/feed?mode=shorts     : 쇼츠(릴스) 피드
+ * 
+ * ⭐ 수정: @CurrentUser User → @AuthenticationPrincipal Long userId
  */
 @Slf4j
 @RestController
@@ -36,15 +37,6 @@ public class FeedController {
 
     /**
      * 피드 조회 (통합 API)
-     * 
-     * @param mode        피드 모드 (home, following, trending, shorts)
-     * @param maxPrice    최대 가격 필터 (0~50000)
-     * @param maxCookTime 최대 조리시간 필터 (0~120분)
-     * @param category    카테고리 필터 (반찬, 간식, 저탄수화물, 저염식, 고단백, 비건)
-     * @param difficulty  난이도 필터 (EASY, MEDIUM, HARD)
-     * @param sortBy      정렬 (RECENT: 최신순, COST_EFFICIENCY: 가성비순)
-     * @param cursor      커서 (마지막으로 본 레시피 ID)
-     * @param size        페이지 크기 (기본 20)
      */
     @GetMapping
     @Operation(summary = "피드 조회", description = "모드별 피드를 조회합니다")
@@ -73,7 +65,7 @@ public class FeedController {
             @Parameter(description = "페이지 크기")
             @RequestParam(defaultValue = "20") Integer size,
             
-            @CurrentUser User currentUser
+            @AuthenticationPrincipal Long userId  // ⭐ 수정: User → Long
     ) {
         // 필터 객체 생성
         FeedFilterRequest filter = FeedFilterRequest.builder()
@@ -83,32 +75,32 @@ public class FeedController {
                 .difficulty(parseDifficulty(difficulty))
                 .sortBy(parseSortBy(sortBy))
                 .cursor(cursor)
-                .size(Math.min(size, 50)) // 최대 50개
+                .size(Math.min(size, 50))
                 .build();
 
         CursorPage<FeedItemDto> result;
 
         switch (mode.toLowerCase()) {
             case "following":
-                if (currentUser == null) {
+                if (userId == null) {
                     return ResponseEntity.ok(ApiResponse.success(CursorPage.empty()));
                 }
-                result = feedService.getFollowingFeed(currentUser, filter);
+                result = feedService.getFollowingFeed(userId, filter);  // ⭐ Long 전달
                 break;
                 
             case "trending":
             case "hot":
-                result = feedService.getTrendingFeed(currentUser, filter);
+                result = feedService.getTrendingFeed(userId, filter);
                 break;
                 
             case "shorts":
             case "reels":
-                result = feedService.getShortsFeed(currentUser, filter);
+                result = feedService.getShortsFeed(userId, filter);
                 break;
                 
             case "home":
             default:
-                result = feedService.getHomeFeed(currentUser, filter);
+                result = feedService.getHomeFeed(userId, filter);
                 break;
         }
 
@@ -117,9 +109,6 @@ public class FeedController {
 
     // ==================== 단축 API ====================
 
-    /**
-     * 홈 피드
-     */
     @GetMapping("/home")
     @Operation(summary = "홈 피드", description = "홈 피드를 조회합니다")
     public ResponseEntity<ApiResponse<CursorPage<FeedItemDto>>> getHomeFeed(
@@ -130,14 +119,11 @@ public class FeedController {
             @RequestParam(defaultValue = "RECENT") String sortBy,
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") Integer size,
-            @CurrentUser User currentUser
+            @AuthenticationPrincipal Long userId  // ⭐ 수정
     ) {
-        return getFeed("home", maxPrice, maxCookTime, category, difficulty, sortBy, cursor, size, currentUser);
+        return getFeed("home", maxPrice, maxCookTime, category, difficulty, sortBy, cursor, size, userId);
     }
 
-    /**
-     * 팔로잉 피드
-     */
     @GetMapping("/following")
     @Operation(summary = "팔로잉 피드", description = "팔로잉한 유저들의 레시피를 조회합니다")
     public ResponseEntity<ApiResponse<CursorPage<FeedItemDto>>> getFollowingFeed(
@@ -148,14 +134,11 @@ public class FeedController {
             @RequestParam(defaultValue = "RECENT") String sortBy,
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") Integer size,
-            @CurrentUser User currentUser
+            @AuthenticationPrincipal Long userId  // ⭐ 수정
     ) {
-        return getFeed("following", maxPrice, maxCookTime, category, difficulty, sortBy, cursor, size, currentUser);
+        return getFeed("following", maxPrice, maxCookTime, category, difficulty, sortBy, cursor, size, userId);
     }
 
-    /**
-     * 트렌딩 피드
-     */
     @GetMapping("/trending")
     @Operation(summary = "트렌딩 피드", description = "인기 레시피를 조회합니다")
     public ResponseEntity<ApiResponse<CursorPage<FeedItemDto>>> getTrendingFeed(
@@ -165,17 +148,13 @@ public class FeedController {
             @RequestParam(required = false) String difficulty,
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") Integer size,
-            @CurrentUser User currentUser
+            @AuthenticationPrincipal Long userId  // ⭐ 수정
     ) {
-        return getFeed("trending", maxPrice, maxCookTime, category, difficulty, "RECENT", cursor, size, currentUser);
+        return getFeed("trending", maxPrice, maxCookTime, category, difficulty, "RECENT", cursor, size, userId);
     }
 
-    /**
-     * 쇼츠(릴스) 피드
-     * - 응답의 firstClipStartSec ~ firstClipEndSec 구간만 재생
-     */
     @GetMapping("/shorts")
-    @Operation(summary = "쇼츠 피드", description = "쇼츠(릴스) 피드를 조회합니다. 첫 번째 클립만 재생됩니다.")
+    @Operation(summary = "쇼츠 피드", description = "쇼츠(릴스) 피드를 조회합니다")
     public ResponseEntity<ApiResponse<CursorPage<FeedItemDto>>> getShortsFeed(
             @RequestParam(required = false) Integer maxPrice,
             @RequestParam(required = false) Integer maxCookTime,
@@ -183,9 +162,9 @@ public class FeedController {
             @RequestParam(required = false) String difficulty,
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") Integer size,
-            @CurrentUser User currentUser
+            @AuthenticationPrincipal Long userId  // ⭐ 수정
     ) {
-        return getFeed("shorts", maxPrice, maxCookTime, category, difficulty, "RECENT", cursor, size, currentUser);
+        return getFeed("shorts", maxPrice, maxCookTime, category, difficulty, "RECENT", cursor, size, userId);
     }
 
     // ==================== 헬퍼 메서드 ====================

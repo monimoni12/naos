@@ -371,6 +371,9 @@ public class RecipeDataInitializer implements CommandLineRunner {
                               List<IngredientData> ingredients,
                               List<ClipData> clips) {
         
+        // ⭐ 카테고리별 가성비 점수 자동 생성 (테스트용)
+        Double costEfficiencyScore = generateCostEfficiencyScore(category);
+        
         Recipe recipe = Recipe.builder()
                 .author(author)
                 .title(title)
@@ -383,6 +386,7 @@ public class RecipeDataInitializer implements CommandLineRunner {
                 .difficulty(difficulty)
                 .dietTags(dietTags)
                 .visibility(Recipe.Visibility.PUBLIC)
+                .costEfficiencyScore(costEfficiencyScore)  // ⭐ 가성비 점수 추가
                 .build();
 
         Recipe saved = recipeRepository.save(recipe);
@@ -428,7 +432,8 @@ public class RecipeDataInitializer implements CommandLineRunner {
             recipeClipRepository.save(clip);
         }
 
-        log.debug("레시피 생성: {} ({}) - 난이도: {}, 클립 {}개", title, category, difficulty, clips.size());
+        log.debug("레시피 생성: {} ({}) - 난이도: {}, 가성비: {}, 클립 {}개", 
+                title, category, difficulty, String.format("%.1f", recipe.getCostEfficiencyScore()), clips.size());
     }
 
     private static IngredientData ing(String name, String amount, int price) {
@@ -441,4 +446,24 @@ public class RecipeDataInitializer implements CommandLineRunner {
 
     private record IngredientData(String name, String amount, int price) {}
     private record ClipData(int index, double startSec, double endSec, String caption) {}
+
+    /**
+     * ⭐ 카테고리별 가성비 점수 자동 생성 (테스트용)
+     * - LOSS(감량): 55~90점 (저칼로리, 다양한 재료)
+     * - GAIN(증량): 45~75점 (고단백, 재료비 높음)
+     * - BALANCE(균형): 50~85점 (균형 잡힌 식단)
+     * - SNACK(간식): 60~95점 (간단한 재료)
+     */
+    private Double generateCostEfficiencyScore(String category) {
+        java.util.Random random = new java.util.Random();
+        double score = switch (category) {
+            case "LOSS" -> 55.0 + random.nextDouble() * 35;    // 55~90
+            case "GAIN" -> 45.0 + random.nextDouble() * 30;    // 45~75
+            case "BALANCE" -> 50.0 + random.nextDouble() * 35; // 50~85
+            case "SNACK" -> 60.0 + random.nextDouble() * 35;   // 60~95
+            default -> 50.0 + random.nextDouble() * 35;        // 50~85
+        };
+        // ⭐ 소수점 둘째자리까지 반올림
+        return Math.round(score * 100.0) / 100.0;
+    }
 }

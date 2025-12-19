@@ -45,11 +45,11 @@ public class AiAnalysisService {
                 .orElseThrow(() -> new IllegalArgumentException("레시피를 찾을 수 없습니다."));
 
         // 이미 분석된 경우 스킵
-        if (recipe.getScoreCost() != null && recipe.getScoreCost() > 0) {
-            log.info("이미 가성비 분석 완료: recipeId={}, score={}", recipeId, recipe.getScoreCost());
+        if (recipe.getCostEfficiencyScore() != null && recipe.getCostEfficiencyScore() > 0) {
+            log.info("이미 가성비 분석 완료: recipeId={}, score={}", recipeId, recipe.getCostEfficiencyScore());
             return CostAnalysisResult.builder()
                     .recipeId(recipeId)
-                    .overallScore(recipe.getScoreCost().intValue())
+                    .overallScore(recipe.getCostEfficiencyScore().intValue())
                     .build();
         }
 
@@ -63,15 +63,67 @@ public class AiAnalysisService {
                 .caloriesPerServing(recipe.getKcalEstimate())
                 .build();
 
+        log.info("AI 분석 요청 시작: recipeId={}, title={}", recipeId, recipe.getTitle());
+
         // AI 분석 호출
         CostAnalysisResult result = llmClient.analyzeCost(request);
 
-        // 결과 저장
-        if (result != null && result.getOverallScore() != null) {
-            recipe.setScoreCost(result.getOverallScore().doubleValue());
-            recipeRepository.save(recipe);
-            log.info("가성비 점수 저장: recipeId={}, score={}", recipeId, result.getOverallScore());
+        // ⭐ 디버깅: 결과 확인
+        if (result == null) {
+            log.error("AI 분석 실패: Flask 응답이 null입니다. recipeId={}", recipeId);
+            return null;
         }
+
+        log.info("AI 분석 결과 수신: recipeId={}, overallScore={}", recipeId, result.getOverallScore());
+
+        // ⭐ 디버깅: breakdown 확인
+        if (result.getBreakdown() != null) {
+            CostAnalysisResult.Breakdown b = result.getBreakdown();
+            log.info("Breakdown: priceEfficiency={}, timeEfficiency={}, nutritionBalance={}, ingredientAccessibility={}",
+                    b.getPriceEfficiency(),
+                    b.getTimeEfficiency(),
+                    b.getNutritionBalance(),
+                    b.getIngredientAccessibility());
+        } else {
+            log.warn("Breakdown이 null입니다! Flask 응답 구조 확인 필요");
+        }
+
+        // ⭐ 디버깅: nutrition 확인
+        if (result.getNutrition() != null) {
+            CostAnalysisResult.Nutrition n = result.getNutrition();
+            log.info("Nutrition: kcal={}, protein={}g, carbs={}g, fat={}g",
+                    n.getKcalEstimate(),
+                    n.getProteinG(),
+                    n.getCarbsG(),
+                    n.getFatG());
+        } else {
+            log.warn("Nutrition이 null입니다! Flask 응답 구조 확인 필요");
+        }
+
+        // 가성비 점수 저장
+        if (result.getOverallScore() != null) {
+            recipe.setCostEfficiencyScore(result.getOverallScore().doubleValue());
+        }
+
+        // 예상 가격 저장
+        if (result.getEstimatedTotalCost() != null) {
+            recipe.setPriceEstimate(result.getEstimatedTotalCost());
+        }
+
+        // ⭐ 영양 정보 저장 (nutrition이 있는 경우)
+        if (result.getNutrition() != null) {
+            CostAnalysisResult.Nutrition nutrition = result.getNutrition();
+            if (nutrition.getKcalEstimate() != null) {
+                recipe.setKcalEstimate(nutrition.getKcalEstimate());
+            }
+            // 추가 영양 정보는 Recipe 엔티티에 필드가 있다면 저장
+            // recipe.setProteinG(nutrition.getProteinG());
+            // recipe.setCarbsG(nutrition.getCarbsG());
+            // recipe.setFatG(nutrition.getFatG());
+        }
+
+        recipeRepository.save(recipe);
+        log.info("가성비 점수 저장 완료: recipeId={}, score={}", recipeId, result.getOverallScore());
 
         return result;
     }

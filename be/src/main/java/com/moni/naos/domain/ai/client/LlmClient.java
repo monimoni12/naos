@@ -1,5 +1,6 @@
 package com.moni.naos.domain.ai.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moni.naos.domain.ai.dto.CostAnalysisRequest;
 import com.moni.naos.domain.ai.dto.CostAnalysisResult;
 import com.moni.naos.global.config.ExternalEndpointProperties;
@@ -23,11 +24,12 @@ public class LlmClient {
 
     private final WebClient aiWebClient;
     private final ExternalEndpointProperties aiProperties;
+    private final ObjectMapper objectMapper;
 
     /**
      * 가성비 분석 요청
      * @param request 레시피 정보 (재료, 시간, 난이도 등)
-     * @return 가성비 분석 결과 (점수 + breakdown)
+     * @return 가성비 분석 결과 (점수 + breakdown + nutrition)
      */
     public CostAnalysisResult analyzeCost(CostAnalysisRequest request) {
         log.info("가성비 분석 요청: recipeId={}, ingredients={}",
@@ -35,17 +37,45 @@ public class LlmClient {
                 request.getIngredients() != null ? request.getIngredients().size() : 0);
 
         try {
-            CostAnalysisResult result = aiWebClient.post()
+            // ⭐ 먼저 raw JSON으로 받아서 로그 찍기
+            String rawJson = aiWebClient.post()
                     .uri("/api/gpt/cost-analysis")
                     .bodyValue(request)
                     .retrieve()
-                    .bodyToMono(CostAnalysisResult.class)
+                    .bodyToMono(String.class)
                     .timeout(Duration.ofMillis(aiProperties.getTimeout()))
                     .block();
+
+            log.info("Flask 응답 (raw): {}", rawJson);
+
+            // ⭐ 수동으로 파싱
+            CostAnalysisResult result = objectMapper.readValue(rawJson, CostAnalysisResult.class);
 
             log.info("가성비 분석 완료: recipeId={}, score={}",
                     request.getRecipeId(),
                     result != null ? result.getOverallScore() : null);
+
+            // ⭐ 디버깅: breakdown 확인
+            if (result != null && result.getBreakdown() != null) {
+                log.info("Breakdown 파싱 성공: priceEfficiency={}, timeEfficiency={}, nutritionBalance={}, ingredientAccessibility={}",
+                        result.getBreakdown().getPriceEfficiency(),
+                        result.getBreakdown().getTimeEfficiency(),
+                        result.getBreakdown().getNutritionBalance(),
+                        result.getBreakdown().getIngredientAccessibility());
+            } else {
+                log.warn("Breakdown이 null입니다!");
+            }
+
+            // ⭐ 디버깅: nutrition 확인
+            if (result != null && result.getNutrition() != null) {
+                log.info("Nutrition 파싱 성공: kcal={}, protein={}g, carbs={}g, fat={}g",
+                        result.getNutrition().getKcalEstimate(),
+                        result.getNutrition().getProteinG(),
+                        result.getNutrition().getCarbsG(),
+                        result.getNutrition().getFatG());
+            } else {
+                log.warn("Nutrition이 null입니다!");
+            }
 
             return result;
 

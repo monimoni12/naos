@@ -32,9 +32,13 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     /** 팔로잉 수 (내가 팔로우하는 사람 수) */
     long countByFollower(User follower);
 
-    /** 내가 팔로우하는 사람들의 ID 목록 (피드용) */
+    /** 내가 팔로우하는 사람들의 ID 목록 - User 파라미터 (기존) */
     @Query("SELECT f.followee.id FROM Follow f WHERE f.follower = :follower")
     List<Long> findFolloweeIdsByFollower(@Param("follower") User follower);
+
+    /** ⭐ 내가 팔로우하는 사람들의 ID 목록 - Long userId 파라미터 (추가) */
+    @Query("SELECT f.followee.id FROM Follow f WHERE f.follower.id = :followerId")
+    List<Long> findFolloweeIdsByFollowerId(@Param("followerId") Long followerId);
 
     /** 나를 팔로우하는 사람들의 ID 목록 */
     @Query("SELECT f.follower.id FROM Follow f WHERE f.followee = :followee")
