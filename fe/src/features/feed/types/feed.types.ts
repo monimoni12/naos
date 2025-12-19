@@ -1,5 +1,8 @@
 /**
  * Feed Types - 백엔드 FeedItemDto 기반
+ * 
+ * ⭐ 수정사항: ValueScoreData breakdown 필드명을 BE 응답에 맞게 수정
+ * ⭐ 수정사항: clips 배열 추가 (홈 피드 슬라이드 구간 재생용)
  */
 
 // 피드 아이템 (레시피 카드)
@@ -20,6 +23,7 @@ export interface FeedItem {
   // 점수
   scorePopular: number | null;
   scoreCost: number | null;
+  costEfficiencyScore: number | null;  // ⭐ BE 실제 필드명 추가
   
   // 미디어
   thumbnailUrl: string | null;
@@ -31,6 +35,9 @@ export interface FeedItem {
   firstClipEndSec: number | null;
   firstClipCaption: string | null;
   totalClipCount: number | null;
+  
+  // ⭐ 전체 클립 배열 (홈 피드 슬라이드 구간 재생용)
+  clips: ClipInfo[] | null;
   
   // 작성자 정보
   authorId: number;
@@ -55,6 +62,15 @@ export interface FeedItem {
   // 메타
   createdAt: string;
   updatedAt: string;
+}
+
+// ⭐ 피드 API에서 내려오는 클립 정보
+export interface ClipInfo {
+  id: number;
+  indexOrd: number;
+  startSec: number;
+  endSec: number;
+  caption: string | null;
 }
 
 // 커서 페이지 응답
@@ -123,13 +139,14 @@ export interface Comment {
 }
 
 // 가성비 점수 (백엔드에서 이미 계산)
+// ⭐ BE 응답 필드명에 맞게 수정됨
 export interface ValueScoreData {
   score: number;
   breakdown?: {
-    priceScore: number;
-    timeScore: number;
-    nutritionScore: number;
-    accessibilityScore: number;
+    priceEfficiency: number;        // 가격 효율 (0-100)
+    timeEfficiency: number;         // 시간 효율 (0-100)
+    nutritionBalance: number;       // 영양 균형 (0-100)
+    ingredientAccessibility: number; // 재료 접근성 (0-100)
   };
   analysis?: string;
 }

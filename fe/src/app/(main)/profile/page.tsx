@@ -40,6 +40,8 @@ export default function ProfilePage() {
   // State
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [userRecipes, setUserRecipes] = useState<any[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<any[]>([]); // ⭐ 추가
+  const [cookingRecipes, setCookingRecipes] = useState<any[]>([]); // ⭐ 추가
   const [loading, setLoading] = useState(true);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -117,10 +119,41 @@ export default function ProfilePage() {
     router.replace('/profile?view=feed', { scroll: false });
   };
 
+  // ⭐ 추가: 북마크 레시피 클릭 핸들러
+  const handleSavedRecipeClick = (recipeId: string, index: number) => {
+    setSelectedRecipeIndex(index);
+    setViewMode('feed');
+    router.replace('/profile?view=feed', { scroll: false });
+  };
+
+  // ⭐ 추가: 요리중 레시피 클릭 핸들러
+  const handleCookingRecipeClick = (recipeId: string, index: number) => {
+    setSelectedRecipeIndex(index);
+    setViewMode('feed');
+    router.replace('/profile?view=feed', { scroll: false });
+  };
+
   const handleDelete = (id: number) => {
     // TODO: 삭제 API 호출
     setUserRecipes(userRecipes.filter((r) => r.id !== id));
     toast.success('레시피가 삭제되었습니다');
+  };
+
+  // ⭐ 추가: 현재 탭에 따른 피드용 레시피 목록 반환
+  const getFeedRecipes = () => {
+    switch (activeTab) {
+      case 'recipes':
+      case 'shorts':
+        return activeTab === 'shorts'
+          ? userRecipes.filter((r) => r.videoUrl)
+          : userRecipes;
+      case 'saved':
+        return savedRecipes;
+      case 'cooking':
+        return cookingRecipes;
+      default:
+        return userRecipes;
+    }
   };
 
   if (loading) {
@@ -276,12 +309,16 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="saved" className="mt-4">
-                <SavedRecipesGrid />
+                <SavedRecipesGrid
+                  onRecipeClick={handleSavedRecipeClick}
+                  onRecipesLoad={setSavedRecipes}
+                />
               </TabsContent>
 
               <TabsContent value="cooking" className="mt-4">
                 <CookingRecipesGrid
-                  key={activeTab === 'cooking' ? Date.now() : 'cooking'}
+                  onRecipeClick={handleCookingRecipeClick}
+                  onRecipesLoad={setCookingRecipes}
                 />
               </TabsContent>
             </Tabs>
@@ -290,14 +327,16 @@ export default function ProfilePage() {
       ) : (
         /* 피드 뷰 */
         <div className="space-y-6">
-          {userRecipes.slice(selectedRecipeIndex).map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              item={toFeedItem(recipe, profile)}
-              clips={recipe.steps || []}
-              onDelete={handleDelete}
-            />
-          ))}
+          {getFeedRecipes()
+            .slice(selectedRecipeIndex)
+            .map((recipe) => (
+              <RecipeCard
+                key={recipe.id}
+                item={toFeedItem(recipe, profile)}
+                clips={recipe.steps || []}
+                onDelete={handleDelete}
+              />
+            ))}
         </div>
       )}
 

@@ -6,17 +6,24 @@
  *
  * 업로드 플로우:
  * 1. upload: 파일 선택
- * 2. clipping: 비디오 클립 분할
- * 3. thumbnail: 썸네일 선택
- * 4. details: 레시피 상세 정보 입력
+ * 2. (비디오인 경우) Whisper STT 호출 → 전사
+ * 3. clipping: 비디오 클립 분할
+ * 4. thumbnail: 썸네일 선택
+ * 5. details: 레시피 상세 정보 입력
+ * 
+ * 수정사항:
+ * - Whisper STT 호출 연동 추가
+ * - 로딩 상태 추가
  */
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 import VideoUploadStep from '@/features/upload/components/VideoUploadStep';
 import ClippingStep from '@/features/upload/components/ClippingStep';
 import ThumbnailSelectorStep from '@/features/upload/components/ThumbnailSelectorStep';
 import RecipeDetailsStep from '@/features/upload/components/RecipeDetailsStep';
+import { transcribeVideo } from '@/features/upload/api/transcribeVideo';
 
 import type {
   UploadStep,
@@ -44,6 +51,10 @@ export default function UploadPage() {
   const [thumbnailTime, setThumbnailTime] = useState(0);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
 
+  // 로딩 상태 (STT 처리 중)
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
+
   // ===== Step 1: Upload =====
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,6 +63,7 @@ export default function UploadPage() {
       setFile(selectedFile);
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
+      setTranscribeError(null);
     }
   };
 
@@ -66,19 +78,39 @@ export default function UploadPage() {
     setHasAudio(true);
     setTranscriptionSegments([]);
     setThumbnailBlob(null);
+    setTranscribeError(null);
   };
 
   const handleUploadNext = async () => {
     if (!file) return;
 
-    // 비디오: 클리핑 스텝으로
-    // 이미지: 바로 썸네일 스텝으로 (이미지 자체가 썸네일)
+    // 비디오: Whisper STT 호출 → 클리핑 스텝
+    // 이미지: 바로 details 스텝 (클리핑/썸네일 불필요)
     if (file.type.startsWith('video')) {
-      // TODO: 실제로는 여기서 Whisper STT 호출해서
-      // hasAudio와 transcriptionSegments 받아옴
-      // 지금은 음성 없음으로 가정
-      setHasAudio(false);
-      setTranscriptionSegments([]);
+      setIsTranscribing(true);
+      setTranscribeError(null);
+
+      try {
+        // ⭐ Flask Whisper STT 호출
+        const result = await transcribeVideo(file);
+        
+        setHasAudio(result.hasAudio);
+        setTranscriptionSegments(result.segments);
+
+        if (result.hasAudio && result.segments.length > 0) {
+          console.log(`✅ 전사 완료: ${result.segments.length}개 세그먼트`);
+        } else {
+          console.log('ℹ️ 음성이 감지되지 않음, 수동 입력 필요');
+        }
+      } catch (error) {
+        console.warn('⚠️ STT 실패, 수동 입력으로 진행:', error);
+        setHasAudio(false);
+        setTranscriptionSegments([]);
+        setTranscribeError('음성 인식에 실패했습니다. 텍스트를 직접 입력해주세요.');
+      } finally {
+        setIsTranscribing(false);
+      }
+
       setStep('clipping');
     } else {
       // 이미지는 클리핑/썸네일 선택 불필요
@@ -133,15 +165,50 @@ export default function UploadPage() {
 
   // ===== Render =====
 
+  // 전사 처리 중 로딩 화면
+  if (isTranscribing) {
+    return (
+      <div className="container max-w-2xl mx-auto px-4 py-6">
+        <div className="bg-card rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b">
+            <h1 className="text-2xl font-bold">음성 인식 중...</h1>
+            <p className="text-muted-foreground mt-1">
+              Whisper AI가 영상의 음성을 분석하고 있습니다
+            </p>
+          </div>
+          <div className="p-12 flex flex-col items-center justify-center gap-6">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="text-center space-y-2">
+              <p className="text-lg font-medium">영상 분석 중</p>
+              <p className="text-sm text-muted-foreground">
+                영상 길이에 따라 1~3분 정도 소요될 수 있습니다
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'upload') {
     return (
-      <VideoUploadStep
-        file={file}
-        previewUrl={previewUrl}
-        onFileChange={handleFileChange}
-        onRemoveFile={handleRemoveFile}
-        onNext={handleUploadNext}
-      />
+      <>
+        <VideoUploadStep
+          file={file}
+          previewUrl={previewUrl}
+          onFileChange={handleFileChange}
+          onRemoveFile={handleRemoveFile}
+          onNext={handleUploadNext}
+        />
+        {/* STT 에러 표시 */}
+        {transcribeError && (
+          <div className="container max-w-2xl mx-auto px-4 mt-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 text-sm">
+              ⚠️ {transcribeError}
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

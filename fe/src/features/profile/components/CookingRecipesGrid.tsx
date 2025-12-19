@@ -9,7 +9,15 @@ import { useEffect, useState } from "react";
 import RecipeGrid from "./RecipeGrid";
 import { getCookingRecipes } from "../api";
 
-export default function CookingRecipesGrid() {
+interface CookingRecipesGridProps {
+  onRecipeClick?: (recipeId: string, index: number) => void;
+  onRecipesLoad?: (recipes: any[]) => void;  // 부모에게 데이터 전달
+}
+
+export default function CookingRecipesGrid({ 
+  onRecipeClick,
+  onRecipesLoad,
+}: CookingRecipesGridProps) {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +35,17 @@ export default function CookingRecipesGrid() {
         videoUrl: recipe.videoUrl,
         thumbnail: recipe.thumbnailUrl,
         likesCount: recipe.likesCount || 0,
+        // 피드 뷰에 필요한 추가 데이터
+        title: recipe.title,
+        description: recipe.description,
+        authorId: recipe.authorId,
+        authorName: recipe.authorUsername || recipe.authorFullName,
+        authorAvatar: recipe.authorAvatarUrl,
+        createdAt: recipe.createdAt,
+        steps: recipe.clips,
       }));
       setRecipes(formattedRecipes);
+      onRecipesLoad?.(formattedRecipes);  // 부모에게 전달
     } catch (error) {
       console.error("Failed to load cooking recipes:", error);
     } finally {
@@ -47,6 +64,7 @@ export default function CookingRecipesGrid() {
   return (
     <RecipeGrid
       recipes={recipes}
+      onRecipeClick={onRecipeClick}
       emptyMessage="요리 중인 레시피가 없습니다"
       showProgress={true}
     />

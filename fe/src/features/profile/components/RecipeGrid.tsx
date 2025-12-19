@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
 /**
  * 레시피 그리드 컴포넌트
  * 위치: src/features/profile/components/RecipeGrid.tsx
  */
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
-import type { CookingProgress } from "../types";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Heart } from 'lucide-react';
+import type { CookingProgress } from '../types';
 
 interface Recipe {
   id: string | number;
@@ -26,17 +26,17 @@ interface RecipeGridProps {
   emptyMessage?: string;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
-  aspectRatio?: "square" | "portrait"; // square: 1:1, portrait: 2:3
+  aspectRatio?: 'square' | 'portrait'; // square: 1:1, portrait: 2:3
   showProgress?: boolean;
 }
 
 export default function RecipeGrid({
   recipes,
   onRecipeClick,
-  emptyMessage = "게시물이 없습니다",
+  emptyMessage = '게시물이 없습니다',
   emptyActionLabel,
   onEmptyAction,
-  aspectRatio = "square",
+  aspectRatio = 'square',
   showProgress = true,
 }: RecipeGridProps) {
   const router = useRouter();
@@ -44,7 +44,9 @@ export default function RecipeGrid({
 
   useEffect(() => {
     if (showProgress) {
-      const cookingProgress = JSON.parse(localStorage.getItem("cookingProgress") || "{}");
+      const cookingProgress = JSON.parse(
+        localStorage.getItem('cookingProgress') || '{}'
+      );
       setProgress(cookingProgress);
     }
   }, [showProgress]);
@@ -65,11 +67,12 @@ export default function RecipeGrid({
     if (onRecipeClick) {
       onRecipeClick(recipeId, index);
     } else {
-      router.push(`/post/${recipeId}`);
+      router.push(`/recipe/${recipeId}`);
     }
   };
 
-  const aspectClass = aspectRatio === "portrait" ? "aspect-[2/3]" : "aspect-square";
+  const aspectClass =
+    aspectRatio === 'portrait' ? 'aspect-[2/3]' : 'aspect-square';
 
   return (
     <div className="grid grid-cols-3 gap-1">
@@ -119,7 +122,8 @@ export default function RecipeGrid({
                 </span>
                 {showProgress && recipeProgress && (
                   <span className="text-white text-sm font-semibold bg-mocha/80 px-2 py-1 rounded">
-                    {recipeProgress.completed.length}/{recipeProgress.total} 단계
+                    {recipeProgress.completed.length}/{recipeProgress.total}{' '}
+                    단계
                   </span>
                 )}
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Heart,
@@ -29,6 +29,14 @@ import {
 import { toast } from 'sonner';
 import { getUser } from '@/lib/auth';
 import { feedApi } from '../api/feedApi';
+// ⭐ 수정: cooking API 함수 추가
+import { 
+  deleteRecipe, 
+  startCooking, 
+  endCookingByRecipe, 
+  getCookingStatus,
+  updateProgress 
+} from '@/features/recipe/api/recipeApi';
 import { CommentsSheet } from './CommentsSheet';
 import { ShareDialog } from './ShareDialog';
 import { ValueScoreBadge } from './ValueScoreBadge';
@@ -42,6 +50,8 @@ interface RecipeCardProps {
   onFollowChange?: (following: boolean) => void;
   onDelete?: (id: number) => void;
   disableClick?: boolean;
+  /** 슬라이드 변경 시 콜백 (상세 페이지에서 조리 단계 연동용) */
+  onSlideChange?: (slideIndex: number) => void;
 }
 
 export function RecipeCard({
@@ -52,6 +62,7 @@ export function RecipeCard({
   onFollowChange,
   onDelete,
   disableClick = false,
+  onSlideChange,
 }: RecipeCardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,24 +77,53 @@ export function RecipeCard({
   const [showShare, setShowShare] = useState(false);
   const [isCooking, setIsCooking] = useState(false);
   const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
+  const [totalSteps, setTotalSteps] = useState(0);  // ⭐ 추가
   const [showClipNumber, setShowClipNumber] = useState(false);
+  
+  // ⭐ 중복 클릭 방지용 - useRef는 즉시 값 변경됨 (useState는 비동기)
+  const isLikeLoadingRef = useRef(false);
+  const isBookmarkLoadingRef = useRef(false);
+  const isFollowLoadingRef = useRef(false);
+  const isCookingLoadingRef = useRef(false);  // ⭐ 추가
 
   const currentUser = getUser();
   const isOwnPost = currentUser && item.authorId === currentUser.id;
-  const isDetailPage = pathname?.includes('/post/');
-  const totalSlides = 1 + (clips.length || item.totalClipCount || 0); // 썸네일 + 클립들
+  const isDetailPage = pathname?.includes('/recipe/');
+  
+  // ⭐ clips: props로 받은 것 또는 item.clips 사용 (홈 피드 슬라이드 구간 재생용)
+  const effectiveClips = clips.length > 0 ? clips : (item.clips || []);
+  const totalSlides = 1 + (effectiveClips.length || item.totalClipCount || 0); // 썸네일 + 클립들
 
-  // 쿠킹 모드 로드
+  // ⭐ 슬라이드 변경 시 상위 컴포넌트에 알림 (상세 페이지 조리 단계 연동)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const cookingRecipes = JSON.parse(localStorage.getItem('cookingRecipes') || '[]');
-    setIsCooking(cookingRecipes.includes(item.id.toString()));
-
-    const cookingProgress = JSON.parse(localStorage.getItem('cookingProgress') || '{}');
-    if (cookingProgress[item.id]) {
-      setCheckedSteps(cookingProgress[item.id].completed || []);
+    if (onSlideChange && currentSlide > 0) {
+      onSlideChange(currentSlide - 1); // 클립 인덱스는 0부터 시작
     }
-  }, [item.id]);
+  }, [currentSlide, onSlideChange]);
+
+  // ⭐ 수정: 쿠킹 모드 로드 - API 호출로 변경
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const loadCookingStatus = async () => {
+      try {
+        const status = await getCookingStatus(item.id);
+        if (status) {
+          setIsCooking(status.isCooking);
+          setTotalSteps(status.progress.totalSteps);
+          // progressStep 기반으로 체크된 스텝 계산
+          if (status.progress.progressStep > 0) {
+            const checked = Array.from({ length: status.progress.progressStep }, (_, i) => i);
+            setCheckedSteps(checked);
+          }
+        }
+      } catch (error) {
+        console.error('요리 상태 로드 실패:', error);
+      }
+    };
+    
+    loadCookingStatus();
+  }, [item.id, currentUser]);
 
   // 클립 번호 표시
   useEffect(() => {
@@ -100,6 +140,10 @@ export function RecipeCard({
       toast.error('로그인이 필요합니다');
       return;
     }
+    
+    // ⭐ 중복 클릭 방지 (useRef는 즉시 값 변경)
+    if (isLikeLoadingRef.current) return;
+    isLikeLoadingRef.current = true;
 
     // Optimistic update
     const newLiked = !isLiked;
@@ -117,6 +161,8 @@ export function RecipeCard({
       setIsLiked(!newLiked);
       setLikeCount(likeCount);
       toast.error('좋아요 처리에 실패했습니다');
+    } finally {
+      isLikeLoadingRef.current = false;
     }
   };
 
@@ -126,6 +172,10 @@ export function RecipeCard({
       toast.error('로그인이 필요합니다');
       return;
     }
+    
+    // ⭐ 중복 클릭 방지 (useRef는 즉시 값 변경)
+    if (isBookmarkLoadingRef.current) return;
+    isBookmarkLoadingRef.current = true;
 
     const newSaved = !isSaved;
     setIsSaved(newSaved);
@@ -138,6 +188,8 @@ export function RecipeCard({
     } catch (error) {
       setIsSaved(!newSaved);
       toast.error('저장 처리에 실패했습니다');
+    } finally {
+      isBookmarkLoadingRef.current = false;
     }
   };
 
@@ -147,6 +199,10 @@ export function RecipeCard({
       toast.error('로그인이 필요합니다');
       return;
     }
+    
+    // ⭐ 중복 클릭 방지 (useRef는 즉시 값 변경)
+    if (isFollowLoadingRef.current) return;
+    isFollowLoadingRef.current = true;
 
     try {
       const result = await feedApi.toggleFollow(item.authorId);
@@ -159,77 +215,115 @@ export function RecipeCard({
       );
     } catch (error) {
       toast.error('팔로우 처리에 실패했습니다');
+    } finally {
+      isFollowLoadingRef.current = false;
     }
   };
 
   // 삭제
-  const handleDelete = () => {
-    if (window.confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+  const handleDelete = async () => {
+    if (!window.confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+      return;
+    }
+    
+    try {
+      await deleteRecipe(item.id);
+      toast.success('게시물이 삭제되었습니다.');
       onDelete?.(item.id);
-    }
-  };
-
-  // 요리 시작/종료
-  const handleCookingToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (typeof window === 'undefined') return;
-
-    const cookingRecipes = JSON.parse(localStorage.getItem('cookingRecipes') || '[]');
-    const recipeIdStr = item.id.toString();
-
-    if (!isCooking) {
-      cookingRecipes.push(recipeIdStr);
-      localStorage.setItem('cookingRecipes', JSON.stringify(cookingRecipes));
-
-      const cookingProgress = JSON.parse(localStorage.getItem('cookingProgress') || '{}');
-      cookingProgress[item.id] = {
-        completed: [],
-        total: clips.length || item.totalClipCount || 0,
-      };
-      localStorage.setItem('cookingProgress', JSON.stringify(cookingProgress));
-
-      sessionStorage.setItem('justStartedCooking', recipeIdStr);
-      setIsCooking(true);
-      router.push(`/post/${item.id}`);
-    } else {
-      const filtered = cookingRecipes.filter((id: string) => id !== recipeIdStr);
-      localStorage.setItem('cookingRecipes', JSON.stringify(filtered));
-      setIsCooking(false);
-    }
-  };
-
-  // 단계 체크
-  const handleStepCheck = (stepIndex: number) => {
-    setCheckedSteps((prev) => {
-      let newChecked: number[];
-      if (prev.includes(stepIndex)) {
-        newChecked = prev.filter((i) => i < stepIndex);
+      
+      // 홈 피드에서 삭제한 경우 새로고침
+      if (!isDetailPage) {
+        window.location.reload();
       } else {
-        const stepsToCheck = Array.from({ length: stepIndex + 1 }, (_, i) => i);
-        newChecked = [...new Set([...prev, ...stepsToCheck])].sort((a, b) => a - b);
+        // 상세 페이지에서 삭제한 경우 홈으로 이동
+        router.push('/');
       }
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      toast.error('삭제에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
 
-      // localStorage 저장
-      const progress = JSON.parse(localStorage.getItem('cookingProgress') || '{}');
-      progress[item.id] = {
-        completed: newChecked,
-        total: clips.length || item.totalClipCount || 0,
-      };
-      localStorage.setItem('cookingProgress', JSON.stringify(progress));
+  // ⭐ 수정: 요리 시작/종료 토글 - API 호출로 변경
+  const handleCookingToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      toast.error('로그인이 필요합니다');
+      return;
+    }
 
-      return newChecked;
-    });
+    // 중복 클릭 방지
+    if (isCookingLoadingRef.current) return;
+    isCookingLoadingRef.current = true;
+
+    try {
+      if (!isCooking) {
+        // "요리 시작하기" 클릭 → API 호출 + 상세 페이지로 이동
+        await startCooking(item.id);
+        setIsCooking(true);
+        
+        // 상태 다시 조회해서 totalSteps 설정
+        const status = await getCookingStatus(item.id);
+        if (status) {
+          setTotalSteps(status.progress.totalSteps);
+        }
+        
+        toast.success('요리를 시작합니다!');
+        
+        // 상세 페이지로 이동
+        router.push(`/recipe/${item.id}`);
+      } else {
+        // "요리중" 클릭 → API 호출로 종료
+        await endCookingByRecipe(item.id);
+        setIsCooking(false);
+        setCheckedSteps([]);
+        toast.success('요리를 종료했습니다');
+      }
+    } catch (error: any) {
+      console.error('요리 상태 변경 실패:', error);
+      toast.error(error.message || '요리 상태 변경에 실패했습니다');
+    } finally {
+      isCookingLoadingRef.current = false;
+    }
+  };
+
+  // ⭐ 수정: 단계 체크 - API 호출로 변경
+  const handleStepCheck = async (stepIndex: number) => {
+    if (!currentUser) return;
+
+    let newChecked: number[];
+    if (checkedSteps.includes(stepIndex)) {
+      newChecked = checkedSteps.filter((i) => i < stepIndex);
+    } else {
+      const stepsToCheck = Array.from({ length: stepIndex + 1 }, (_, i) => i);
+      newChecked = [...new Set([...checkedSteps, ...stepsToCheck])].sort((a, b) => a - b);
+    }
+
+    // Optimistic update
+    setCheckedSteps(newChecked);
+
+    try {
+      // 가장 높은 체크된 스텝 수를 진행 상황으로 전송
+      const progressStep = newChecked.length;
+      await updateProgress(item.id, progressStep);
+    } catch (error) {
+      console.error('진행 상황 업데이트 실패:', error);
+      // Revert on error
+      setCheckedSteps(checkedSteps);
+      toast.error('진행 상황 저장에 실패했습니다');
+    }
   };
 
   // 카드 클릭
   const handleCardClick = () => {
     if (!disableClick) {
-      router.push(`/post/${item.id}`);
+      router.push(`/recipe/${item.id}`);
     }
   };
 
-  // 현재 클립
-  const currentClip = currentSlide > 0 ? clips[currentSlide - 1] : null;
+  // ⭐ 현재 클립 - effectiveClips 사용
+  const currentClip = currentSlide > 0 ? effectiveClips[currentSlide - 1] : null;
 
   return (
     <article
@@ -247,7 +341,7 @@ export function RecipeCard({
           <Avatar className="h-10 w-10 ring-2 ring-primary/10">
             <AvatarImage src={item.authorAvatarUrl || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary font-medium">
-              {item.authorUsername?.[0] || '?'}
+              {(item.authorUsername || item.authorFullName || '?')[0]}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -257,31 +351,26 @@ export function RecipeCard({
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
-          {/* 가성비 점수 */}
-          <ValueScoreBadge score={item.scoreCost} />
-
-          {/* 요리 진행 상태 */}
-          {isCooking && checkedSteps.length > 0 && (
+          <ValueScoreBadge score={item.costEfficiencyScore ?? item.scoreCost} />
+          {isCooking && (
             <span className="text-xs font-semibold text-mocha bg-mocha/10 px-3 py-1 rounded-full">
-              {checkedSteps.length}/{clips.length || item.totalClipCount || 0} 단계
+              {checkedSteps.length}/{totalSteps || effectiveClips.length || item.totalClipCount || 0} 단계
             </span>
           )}
-
-          {/* 팔로우 버튼 */}
-          {!isFollowing && !isOwnPost && currentUser && (
+          {!isFollowing && !isOwnPost && (
             <Button
               variant="mocha"
               size="sm"
               className="h-8 px-4 font-semibold"
-              onClick={handleFollow}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFollow();
+              }}
             >
               팔로우
             </Button>
           )}
-
-          {/* 더보기 메뉴 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -289,7 +378,13 @@ export function RecipeCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="gap-2" onClick={handleSaveToggle}>
+              <DropdownMenuItem 
+                className="gap-2" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveToggle();
+                }}
+              >
                 <Bookmark className="h-3 w-3" />
                 <span>{isSaved ? '저장 취소' : '저장'}</span>
               </DropdownMenuItem>
@@ -301,12 +396,14 @@ export function RecipeCard({
                 <Star className="h-3 w-3" />
                 <span>즐겨찾기에 추가</span>
               </DropdownMenuItem>
-              {isFollowing && (
-                <DropdownMenuItem className="gap-2" onClick={handleFollow}>
-                  <UserMinus className="h-3 w-3" />
-                  <span>팔로우 취소</span>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem className="gap-2">
+                <UserMinus className="h-3 w-3" />
+                <span>팔로우 취소</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2">
+                <AlertCircle className="h-3 w-3" />
+                <span>이 계정 정보</span>
+              </DropdownMenuItem>
               <DropdownMenuItem className="gap-2">
                 <EyeOff className="h-3 w-3" />
                 <span>숨기기</span>
@@ -358,13 +455,18 @@ export function RecipeCard({
               muted
               playsInline
               onLoadedMetadata={(e) => {
-                if (currentClip?.startSec !== undefined) {
-                  e.currentTarget.currentTime = currentClip.startSec;
+                // ⭐ clips 배열 또는 firstClip 정보 사용
+                const startSec = currentClip?.startSec ?? (currentSlide === 1 ? item.firstClipStartSec : undefined);
+                if (startSec !== undefined && startSec !== null) {
+                  e.currentTarget.currentTime = startSec;
                 }
               }}
               onTimeUpdate={(e) => {
-                if (currentClip?.endSec !== undefined && e.currentTarget.currentTime >= currentClip.endSec) {
-                  e.currentTarget.currentTime = currentClip.startSec || 0;
+                // ⭐ clips 배열 또는 firstClip 정보 사용
+                const startSec = currentClip?.startSec ?? (currentSlide === 1 ? item.firstClipStartSec : 0);
+                const endSec = currentClip?.endSec ?? (currentSlide === 1 ? item.firstClipEndSec : undefined);
+                if (endSec !== undefined && endSec !== null && e.currentTarget.currentTime >= endSec) {
+                  e.currentTarget.currentTime = startSec || 0;
                 }
               }}
             />
@@ -372,7 +474,7 @@ export function RecipeCard({
         )}
 
         {/* 상세 페이지: 클립 자막 */}
-        {isDetailPage && currentSlide > 0 && currentClip && (
+        {isDetailPage && currentSlide > 0 && (currentClip || (currentSlide === 1 && item.firstClipCaption)) && (
           <div className="absolute bottom-4 left-4 right-4">
             {isCooking ? (
               <div
@@ -397,7 +499,7 @@ export function RecipeCard({
                     handleStepCheck(currentSlide - 1);
                   }}
                 >
-                  <span className="font-semibold">{currentSlide}단계.</span> {currentClip.caption}
+                  <span className="font-semibold">{currentSlide}단계.</span> {currentClip?.caption || item.firstClipCaption}
                 </label>
                 {checkedSteps.includes(currentSlide - 1) && (
                   <Check className="h-5 w-5 text-mocha flex-shrink-0 mt-1" />
@@ -406,7 +508,7 @@ export function RecipeCard({
             ) : (
               <div className="bg-muted/30 p-3 rounded-lg">
                 <p>
-                  <span className="font-semibold">{currentSlide}단계.</span> {currentClip.caption}
+                  <span className="font-semibold">{currentSlide}단계.</span> {currentClip?.caption || item.firstClipCaption}
                 </p>
               </div>
             )}
@@ -474,7 +576,13 @@ export function RecipeCard({
       <div className="p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-1" onClick={handleLike}>
+            <button 
+              className="flex items-center gap-1" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLike();
+              }}
+            >
               <Heart
                 className={`h-5 w-5 transition-colors ${
                   isLiked ? 'fill-mocha text-mocha' : 'hover:text-muted-foreground'
@@ -486,17 +594,32 @@ export function RecipeCard({
             </button>
             <button
               className="flex items-center gap-1"
-              onClick={() => setShowComments(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowComments(true);
+              }}
               disabled={item.disableComments}
             >
               <MessageCircle className="h-5 w-5 transition-colors hover:text-muted-foreground" />
               {commentCount > 0 && <span className="text-sm">{commentCount.toLocaleString()}</span>}
             </button>
-            <button className="h-8 w-8 flex items-center justify-center" onClick={() => setShowShare(true)}>
+            <button 
+              className="h-8 w-8 flex items-center justify-center" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShare(true);
+              }}
+            >
               <Share2 className="h-5 w-5 transition-colors hover:text-muted-foreground" />
             </button>
           </div>
-          <button className="h-8 w-8 flex items-center justify-center" onClick={handleSaveToggle}>
+          <button 
+            className="h-8 w-8 flex items-center justify-center" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSaveToggle();
+            }}
+          >
             <Bookmark
               className={`h-5 w-5 transition-colors ${
                 isSaved ? 'fill-mocha text-mocha' : 'hover:text-muted-foreground'
@@ -513,12 +636,15 @@ export function RecipeCard({
               ? item.caption
               : currentSlide === 0
               ? item.caption
-              : currentClip?.caption || item.caption}
+              : currentClip?.caption || (currentSlide === 1 ? item.firstClipCaption : null) || item.caption}
           </p>
           {!item.disableComments && commentCount > 0 && (
             <button
               className="text-muted-foreground hover:text-foreground"
-              onClick={() => setShowComments(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowComments(true);
+              }}
             >
               댓글 {commentCount}개 모두 보기
             </button>
@@ -526,7 +652,11 @@ export function RecipeCard({
         </div>
 
         {/* 요리 시작하기 버튼 */}
-        <Button variant="mocha" className="w-full mt-4 font-semibold" onClick={handleCookingToggle}>
+        <Button 
+          variant="mocha" 
+          className="w-full mt-4 font-semibold" 
+          onClick={handleCookingToggle}
+        >
           <ChefHat className="h-5 w-5" />
           {isCooking ? '요리중' : '요리 시작하기'}
         </Button>
@@ -546,7 +676,7 @@ export function RecipeCard({
         open={showShare}
         onOpenChange={setShowShare}
         title={item.title}
-        url={typeof window !== 'undefined' ? `${window.location.origin}/post/${item.id}` : undefined}
+        url={typeof window !== 'undefined' ? `${window.location.origin}/recipe/${item.id}` : undefined}
       />
     </article>
   );

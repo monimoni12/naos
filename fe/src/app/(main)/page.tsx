@@ -12,9 +12,10 @@ export default function HomePage() {
     filters,
     updateFilters,
     loadMore,
-    toggleLike,
-    toggleBookmark,
-    toggleFollow,
+    // ⭐ API 호출 없이 로컬 상태만 업데이트하는 함수들
+    updateItemLike,
+    updateItemBookmark,
+    updateItemFollow,
     deleteRecipe,
   } = useFeed({ mode: 'home' });
 
@@ -37,9 +38,10 @@ export default function HomePage() {
             <RecipeCard
               key={item.id}
               item={item}
-              onLikeChange={(liked, count) => toggleLike(item.id)}
-              onBookmarkChange={(bookmarked) => toggleBookmark(item.id)}
-              onFollowChange={(following) => toggleFollow(item.authorId)}
+              // ⭐ RecipeCard가 이미 API 호출함 → 여기서는 로컬 상태만 동기화
+              onLikeChange={(liked, count) => updateItemLike(item.id, liked, count)}
+              onBookmarkChange={(bookmarked) => updateItemBookmark(item.id, bookmarked)}
+              onFollowChange={(following) => updateItemFollow(item.authorId, following)}
               onDelete={deleteRecipe}
             />
           ))}

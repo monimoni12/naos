@@ -154,6 +154,37 @@ export function useFeed({
     }
   }, []);
 
+  // ⭐ API 호출 없이 로컬 상태만 업데이트 (RecipeCard가 이미 API 호출했을 때 사용)
+  const updateItemLike = useCallback((recipeId: number, liked: boolean, count: number) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === recipeId
+          ? { ...item, isLiked: liked, likeCount: count }
+          : item
+      )
+    );
+  }, []);
+
+  const updateItemBookmark = useCallback((recipeId: number, bookmarked: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === recipeId
+          ? { ...item, isBookmarked: bookmarked }
+          : item
+      )
+    );
+  }, []);
+
+  const updateItemFollow = useCallback((authorId: number, following: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.authorId === authorId
+          ? { ...item, isFollowing: following }
+          : item
+      )
+    );
+  }, []);
+
   return {
     items,
     loading,
@@ -168,6 +199,10 @@ export function useFeed({
     toggleBookmark,
     toggleFollow,
     deleteRecipe,
+    // ⭐ API 호출 없이 로컬 상태만 업데이트 (RecipeCard 콜백용)
+    updateItemLike,
+    updateItemBookmark,
+    updateItemFollow,
   };
 }
 

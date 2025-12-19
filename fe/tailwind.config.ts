@@ -50,6 +50,26 @@ const config: Config = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // ⭐ 슬라이더 물고기 파동 애니메이션 (lovable 버전과 동일)
+      keyframes: {
+        wave: {
+          '0%, 100%': { 
+            transform: 'translateY(0px) rotate(0deg)' 
+          },
+          '25%': { 
+            transform: 'translateY(-8px) rotate(-5deg)' 
+          },
+          '50%': {
+            transform: 'translateY(0px) rotate(0deg)'
+          },
+          '75%': { 
+            transform: 'translateY(8px) rotate(5deg)' 
+          },
+        },
+      },
+      animation: {
+        wave: 'wave 3s ease-in-out infinite',
+      },
     },
   },
   plugins: [tailwindcssAnimate],

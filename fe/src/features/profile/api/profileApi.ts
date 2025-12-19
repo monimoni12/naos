@@ -187,22 +187,28 @@ export async function getRecipeProgress(recipeId: number): Promise<RecipeProgres
   return response.json();
 }
 
-/** 요리 중인 레시피들 조회 (로컬 스토리지 + API 조합) */
+/**
+ * 요리 중인 레시피들 조회
+ * ⭐ 수정: localStorage → API 호출
+ */
 export async function getCookingRecipes(): Promise<RecipeResponse[]> {
-  // 로컬 스토리지에서 진행 중인 레시피 ID 가져오기
-  const cookingProgress = JSON.parse(localStorage.getItem('cookingProgress') || '{}');
-  const recipeIds = Object.keys(cookingProgress);
+  // 활성 세션 목록 조회
+  const response = await authFetch('/api/cooking/active/all');
+  if (!response.ok) {
+    return [];
+  }
   
-  if (recipeIds.length === 0) return [];
+  const sessions: CookingSessionResponse[] = await response.json();
+  if (sessions.length === 0) return [];
   
-  // 각 레시피 상세 조회 (병렬)
+  // 각 세션의 레시피 상세 조회 (병렬)
   const recipes = await Promise.all(
-    recipeIds.map(async (id) => {
+    sessions.map(async (session) => {
       try {
-        const response = await authFetch(`/api/recipes/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          return data.data || data;
+        const res = await authFetch(`/api/recipes/${session.recipeId}`);
+        if (res.ok) {
+          const data = await res.json();
+          return data.data || data; // ApiResponse wrapper 처리
         }
         return null;
       } catch {
