@@ -1,28 +1,29 @@
 spring:
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=true
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://mysql:3306/naos?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: naos1234!
   jpa:
     hibernate:
-      ddl-auto: validate  # 운영에서는 validate
+      ddl-auto: update
     show-sql: false
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      host: redis
+      port: 6379
 
 # ==================== Custom (운영) ====================
 custom:
   site:
     name: "NAOS"
     cookie:
-      secure: true
-      sameSite: None
-    cookieDomain: "${custom.prod.cookieDomain}"
-    frontUrl: "${custom.prod.frontUrl}"
-    backUrl: "${custom.prod.backUrl}"
+      secure: false
+      sameSite: Lax
+    cookieDomain: ""
+    frontUrl: "http://3.34.99.116:3000"
+    backUrl: "http://3.34.99.116:8090"
+  jwt:
+    secretKey: "naos-jwt-secret-key-must-be-at-least-32-characters-long-for-security"
 
 # ==================== Logging (운영) ====================
 logging:
