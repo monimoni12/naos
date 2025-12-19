@@ -123,6 +123,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:8090",
+                "http://3.34.99.116:3000",
+                "http://3.34.99.116:8090",
+                "http://wearenaos.com:3000",
+                "http://wearenaos.com:8090",
                 "https://naossss.site",
                 "https://www.naossss.site"
         ));
