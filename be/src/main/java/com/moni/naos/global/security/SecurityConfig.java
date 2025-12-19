@@ -125,10 +125,10 @@ public class SecurityConfig {
                 "http://localhost:8090",
                 "http://3.34.99.116:3000",
                 "http://3.34.99.116:8090",
-                "http://wearenaos.com:3000",
-                "http://wearenaos.com:8090",
-                "https://naossss.site",
-                "https://www.naossss.site"
+                "http://wearenaos.com",
+                "http://www.wearenaos.com",
+                "https://wearenaos.com",
+                "https://www.wearenaos.com"
         ));
 
         configuration.setAllowedMethods(Arrays.asList(
