@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * ValueScoreBadge - 가성비 점수 배지
@@ -6,57 +6,54 @@
  * ⭐ 수정사항: breakdown 필드명을 BE 응답에 맞게 수정
  */
 
-import { TrendingUp, Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { TrendingUp, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-
-// ⭐ BE 응답 필드명에 맞게 수정됨
-interface ValueScoreBreakdown {
-  priceEfficiency: number;        // 가격 효율 (0-100)
-  timeEfficiency: number;         // 시간 효율 (0-100)
-  nutritionBalance: number;       // 영양 균형 (0-100)
-  ingredientAccessibility: number; // 재료 접근성 (0-100)
-}
+} from "@/components/ui/tooltip";
+import type { ValueScoreBreakdown } from "../types/recipe.types";
+import { getScoreLabel, getScoreColorClass } from "../types/recipe.types";
 
 interface ValueScoreBadgeProps {
   score: number | null;
-  breakdown?: ValueScoreBreakdown;
+  breakdown?: ValueScoreBreakdown | null;
   analysis?: string;
   loading?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
-export function ValueScoreBadge({
+export default function ValueScoreBadge({
   score,
   breakdown,
   analysis,
   loading = false,
+  size = "md",
 }: ValueScoreBadgeProps) {
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500 text-white';
-    if (score >= 60) return 'bg-yellow-500 text-white';
-    return 'bg-muted text-muted-foreground';
+  const sizeClasses = {
+    sm: "px-2 py-0.5 text-xs gap-1",
+    md: "px-2.5 py-1 text-xs gap-1.5",
+    lg: "px-3 py-1.5 text-sm gap-2",
   };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return '최고';
-    if (score >= 60) return '좋음';
-    return '보통';
+  const iconSizes = {
+    sm: "h-2.5 w-2.5",
+    md: "h-3 w-3",
+    lg: "h-4 w-4",
   };
 
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-        <Loader2 className="h-3 w-3 animate-spin" />
+      <div className={`flex items-center rounded-full bg-muted text-muted-foreground font-medium ${sizeClasses[size]}`}>
+        <Loader2 className={`animate-spin ${iconSizes[size]}`} />
         <span>분석중</span>
       </div>
     );
   }
 
-  if (score === null) {
+  if (score === null || score === undefined) {
     return null;
   }
 
@@ -65,10 +62,10 @@ export function ValueScoreBadge({
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-help ${getScoreColor(score)}`}
+            className={`flex items-center rounded-full font-semibold cursor-help ${sizeClasses[size]} ${getScoreColorClass(score)}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <TrendingUp className="h-3 w-3" />
+            <TrendingUp className={iconSizes[size]} />
             <span>{score}점</span>
             <span className="opacity-80">({getScoreLabel(score)})</span>
           </div>
@@ -86,11 +83,14 @@ export function ValueScoreBadge({
               </div>
             )}
             {analysis && <p className="text-muted-foreground">{analysis}</p>}
+            {!breakdown && !analysis && (
+              <p className="text-muted-foreground">
+                AI가 가격, 시간, 영양을 종합 분석한 점수입니다.
+              </p>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
-
-export default ValueScoreBadge;

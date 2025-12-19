@@ -2,20 +2,21 @@
  * AI 분석 API 호출
  * 위치: src/features/upload/api/analyzeRecipe.ts
  * 
- * Flask AI 서버의 analyze_recipe_full 엔드포인트 호출
- * 가성비 점수 + 영양 정보를 한 번에 받아옴
+ * BE RecipeController의 /api/recipes/{id}/analyze 호출
+ * 
+ * 수정사항:
+ * - BE 실제 응답 구조에 맞게 타입 수정
+ * - breakdown 필드명 수정: priceEfficiency, timeEfficiency, nutritionBalance, ingredientAccessibility
+ * - nutrition 객체 추가
  */
 
+import { authFetch } from "@/lib/auth";
 import type {
-  AnalysisRequest,
-  AnalysisResponse,
   AnalysisData,
   IngredientInput,
 } from "../types/upload.types";
 
-// API 베이스 URL (환경변수로 관리)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090";
-const AI_API_URL = process.env.NEXT_PUBLIC_AI_API_URL || "http://localhost:5000";
 
 /**
  * 재료 문자열을 파싱하여 IngredientInput 배열로 변환
@@ -42,44 +43,55 @@ export function parseIngredients(ingredientsStr: string): IngredientInput[] {
 }
 
 /**
- * AI 서버에 레시피 분석 요청
- * Spring BE를 거치지 않고 직접 Flask AI 서버 호출
+ * BE RecipeAnalysisResponse 타입
+ * ⭐ BE 실제 응답 구조에 맞게 수정됨
  */
-export async function analyzeRecipeDirect(
-  request: AnalysisRequest
-): Promise<AnalysisResponse> {
-  const response = await fetch(`${AI_API_URL}/analyze-recipe-full`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    throw new Error(`AI 분석 실패: ${response.status}`);
-  }
-
-  return response.json();
+interface RecipeAnalysisResponse {
+  recipeId: number;
+  status: string;
+  message: string | null;
+  
+  // 가성비 점수
+  costEfficiencyScore: number | null;
+  priceEstimate: number | null;
+  
+  // AI 코멘트
+  comment: string | null;
+  
+  // ⭐ 세부 점수 (BE 필드명에 맞춤)
+  breakdown: {
+    priceEfficiency: number;        // 가격 효율
+    timeEfficiency: number;         // 시간 효율
+    nutritionBalance: number;       // 영양 균형
+    ingredientAccessibility: number; // 재료 접근성
+  } | null;
+  
+  // ⭐ 영양 정보 (별도 객체)
+  nutrition: {
+    kcalEstimate: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+    fiberG: number;
+    sodiumMg: number;
+  } | null;
 }
 
 /**
- * Spring BE를 통해 AI 분석 요청 (권장)
- * BE에서 추가 검증 및 캐싱 처리
+ * AI 분석 요청 (BE 경로)
+ * POST /api/recipes/{id}/analyze
+ * 
+ * ⚠️ 주의: recipeId가 필요함 (레시피가 먼저 생성되어 있어야 함)
  */
-export async function analyzeRecipe(
-  request: AnalysisRequest
-): Promise<AnalysisResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/ai/analyze-recipe`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  });
+export async function analyzeRecipe(recipeId: number): Promise<RecipeAnalysisResponse> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/recipes/${recipeId}/analyze`,
+    { method: "POST" }
+  );
 
   if (!response.ok) {
-    throw new Error(`AI 분석 실패: ${response.status}`);
+    const error = await response.text();
+    throw new Error(`AI 분석 실패: ${response.status} - ${error}`);
   }
 
   return response.json();
@@ -87,55 +99,41 @@ export async function analyzeRecipe(
 
 /**
  * API 응답을 UI용 데이터로 변환
+ * ⭐ BE 응답 구조에 맞게 수정됨
  */
 export function transformAnalysisResponse(
-  response: AnalysisResponse
+  response: RecipeAnalysisResponse
 ): AnalysisData {
   return {
     nutrition: {
-      calories: response.nutrition.kcal_estimate,
-      protein: response.nutrition.protein_g,
-      carbs: response.nutrition.carbs_g,
-      fat: response.nutrition.fat_g,
-      fiber: response.nutrition.fiber_g,
-      sodium: response.nutrition.sodium_mg,
+      // ⭐ nutrition 객체에서 가져옴
+      calories: response.nutrition?.kcalEstimate || 0,
+      protein: response.nutrition?.proteinG || 0,
+      carbs: response.nutrition?.carbsG || 0,
+      fat: response.nutrition?.fatG || 0,
+      fiber: response.nutrition?.fiberG || 0,
+      sodium: response.nutrition?.sodiumMg || 0,
     },
     valueScore: {
-      total: response.cost_efficiency.score,
-      priceEfficiency: response.cost_efficiency.breakdown.price_efficiency,
-      nutritionBalance: response.cost_efficiency.breakdown.nutrition_balance,
-      timeEfficiency: response.cost_efficiency.breakdown.time_efficiency,
-      accessibility: response.cost_efficiency.breakdown.accessibility,
-      estimatedPrice: response.cost_efficiency.estimated_total_price,
+      total: response.costEfficiencyScore || 0,
+      // ⭐ BE 필드명에 맞게 수정
+      priceEfficiency: response.breakdown?.priceEfficiency || 0,
+      nutritionBalance: response.breakdown?.nutritionBalance || 0,
+      timeEfficiency: response.breakdown?.timeEfficiency || 0,
+      accessibility: response.breakdown?.ingredientAccessibility || 0,
+      estimatedPrice: response.priceEstimate || 0,
     },
   };
 }
 
 /**
  * 통합 분석 함수 (컴포넌트에서 사용)
+ * 
+ * @param recipeId - 분석할 레시피 ID (레시피가 먼저 생성되어 있어야 함)
  */
 export async function analyzeRecipeWithTransform(
-  title: string,
-  ingredientsStr: string,
-  cookTime: number,
-  difficulty: "쉬움" | "보통" | "어려움",
-  servings: number = 1
+  recipeId: number
 ): Promise<AnalysisData> {
-  const request: AnalysisRequest = {
-    title,
-    ingredients: parseIngredients(ingredientsStr),
-    cook_time_min: cookTime,
-    difficulty,
-    servings,
-  };
-
-  // BE를 통한 호출 시도, 실패시 직접 호출
-  try {
-    const response = await analyzeRecipe(request);
-    return transformAnalysisResponse(response);
-  } catch (error) {
-    console.warn("BE 호출 실패, AI 서버 직접 호출 시도:", error);
-    const response = await analyzeRecipeDirect(request);
-    return transformAnalysisResponse(response);
-  }
+  const response = await analyzeRecipe(recipeId);
+  return transformAnalysisResponse(response);
 }

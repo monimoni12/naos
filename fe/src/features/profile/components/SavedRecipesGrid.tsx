@@ -6,12 +6,18 @@
  */
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import RecipeGrid from "./RecipeGrid";
 import { getBookmarkedRecipes } from "../api";
 
-export default function SavedRecipesGrid() {
-  const router = useRouter();
+interface SavedRecipesGridProps {
+  onRecipeClick?: (recipeId: string, index: number) => void;
+  onRecipesLoad?: (recipes: any[]) => void;  // 부모에게 데이터 전달
+}
+
+export default function SavedRecipesGrid({ 
+  onRecipeClick,
+  onRecipesLoad,
+}: SavedRecipesGridProps) {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +35,17 @@ export default function SavedRecipesGrid() {
         videoUrl: recipe.videoUrl,
         thumbnail: recipe.thumbnailUrl,
         likesCount: recipe.likesCount || 0,
+        // 피드 뷰에 필요한 추가 데이터
+        title: recipe.title,
+        description: recipe.description,
+        authorId: recipe.authorId,
+        authorName: recipe.authorUsername || recipe.authorFullName,
+        authorAvatar: recipe.authorAvatarUrl,
+        createdAt: recipe.createdAt,
+        steps: recipe.clips,
       }));
       setRecipes(formattedRecipes);
+      onRecipesLoad?.(formattedRecipes);  // 부모에게 전달
     } catch (error) {
       console.error("Failed to load saved recipes:", error);
     } finally {
@@ -49,6 +64,7 @@ export default function SavedRecipesGrid() {
   return (
     <RecipeGrid
       recipes={recipes}
+      onRecipeClick={onRecipeClick}
       emptyMessage="저장된 레시피가 없습니다"
       showProgress={true}
     />

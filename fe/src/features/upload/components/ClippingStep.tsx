@@ -22,6 +22,8 @@ import {
   Pause,
   Scissors,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 import type { VideoClip, TranscriptionSegment } from '../types/upload.types';
@@ -82,6 +84,7 @@ export default function ClippingStep({
   const [dragTarget, setDragTarget] = useState<DragTarget>(null);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [activeClipId, setActiveClipId] = useState<string | null>(null);
+  const [currentClipIndex, setCurrentClipIndex] = useState(0); // ⭐ 현재 보고 있는 클립 인덱스
 
   const isVideo = file?.type.startsWith('video');
 
@@ -332,6 +335,7 @@ export default function ClippingStep({
           : '',
     }));
     setConfirmedClips(clipsWithText);
+    setCurrentClipIndex(0); // ⭐ 첫 번째 클립부터 시작
   };
 
   const updateClipText = (clipId: string, text: string) => {
@@ -343,7 +347,25 @@ export default function ClippingStep({
     );
   };
 
-  const resetToEdit = () => setConfirmedClips(null);
+  const resetToEdit = () => {
+    setConfirmedClips(null);
+    setCurrentClipIndex(0); // ⭐ 리셋 시 인덱스도 초기화
+  };
+
+  // ⭐ 이전/다음 클립으로 이동 (순환)
+  const goToPrevClip = () => {
+    if (!confirmedClips) return;
+    setCurrentClipIndex((prev) => 
+      prev === 0 ? confirmedClips.length - 1 : prev - 1
+    );
+  };
+
+  const goToNextClip = () => {
+    if (!confirmedClips) return;
+    setCurrentClipIndex((prev) => 
+      prev === confirmedClips.length - 1 ? 0 : prev + 1
+    );
+  };
 
   const handleNext = () => {
     if (confirmedClips) onNext(confirmedClips);
@@ -547,19 +569,31 @@ export default function ClippingStep({
             </div>
           )}
 
-          {/* Confirmed clips list */}
-          {confirmedClips && (
+          {/* Confirmed clips list - 좌우 화살표로 하나씩 (순환) */}
+          {confirmedClips && confirmedClips.length > 0 && (
             <div className="space-y-4">
+              {/* Header with navigation */}
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold">
-                    클립별 텍스트 ({confirmedClips.length}개)
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {hasAudio && transcriptionSegments.length > 0
-                      ? '전사된 내용이 자동으로 입력되었습니다. 각 슬라이드 하단에 표시됩니다.'
-                      : '각 슬라이드 하단에 표시될 텍스트를 입력하세요.'}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={goToPrevClip}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="font-semibold min-w-[80px] text-center">
+                    클립 {currentClipIndex + 1} / {confirmedClips.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={goToNextClip}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
                 <Button variant="outline" size="sm" onClick={resetToEdit}>
                   <RotateCcw className="h-4 w-4 mr-1.5" />
@@ -567,90 +601,110 @@ export default function ClippingStep({
                 </Button>
               </div>
 
-              <div className="grid gap-3">
-                {confirmedClips.map((clip, index) => {
-                  const isClipPlaying =
-                    isPlaying &&
-                    activeClipId === clip.id &&
-                    currentTime >= clip.startTime &&
-                    currentTime < clip.endTime;
-                  const clipDuration = clip.endTime - clip.startTime;
-                  const clipProgress =
-                    activeClipId === clip.id &&
-                    currentTime >= clip.startTime &&
-                    currentTime <= clip.endTime
-                      ? ((currentTime - clip.startTime) / clipDuration) * 100
-                      : 0;
+              <p className="text-xs text-muted-foreground">
+                {hasAudio && transcriptionSegments.length > 0
+                  ? '전사된 내용이 자동으로 입력되었습니다. 각 슬라이드 하단에 표시됩니다.'
+                  : '각 슬라이드 하단에 표시될 텍스트를 입력하세요.'}
+              </p>
 
-                  return (
-                    <div
-                      key={clip.id}
-                      className="p-3 rounded-lg border bg-muted/30 space-y-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-muted-foreground/30 flex items-center justify-center text-sm font-bold text-foreground/70">
-                          {index + 1}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            if (isClipPlaying) {
-                              videoRef.current?.pause();
-                              setIsPlaying(false);
-                            } else {
-                              handleSeekToClip(clip.id, clip.startTime);
-                            }
-                          }}
-                          title={isClipPlaying ? '일시정지' : '이 클립 재생'}
-                        >
-                          {isClipPlaying ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <div className="flex-1">
-                          <span className="text-sm font-medium font-mono">
-                            {formatTime(clip.startTime)} →{' '}
-                            {formatTime(clip.endTime)}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({Math.round(clipDuration)}초)
-                          </span>
-                        </div>
+              {/* Current clip card */}
+              {(() => {
+                const clip = confirmedClips[currentClipIndex];
+                if (!clip) return null;
+                
+                const isClipPlaying =
+                  isPlaying &&
+                  activeClipId === clip.id &&
+                  currentTime >= clip.startTime &&
+                  currentTime < clip.endTime;
+                const clipDuration = clip.endTime - clip.startTime;
+                const clipProgress =
+                  activeClipId === clip.id &&
+                  currentTime >= clip.startTime &&
+                  currentTime <= clip.endTime
+                    ? ((currentTime - clip.startTime) / clipDuration) * 100
+                    : 0;
+
+                return (
+                  <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
+                        {currentClipIndex + 1}
                       </div>
-
-                      <div
-                        className="h-2 bg-muted rounded-full cursor-pointer overflow-hidden"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const percent = (e.clientX - rect.left) / rect.width;
-                          handleSeekWithinClip(
-                            clip.id,
-                            clip,
-                            Math.max(0, Math.min(1, percent))
-                          );
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={() => {
+                          if (isClipPlaying) {
+                            videoRef.current?.pause();
+                            setIsPlaying(false);
+                          } else {
+                            handleSeekToClip(clip.id, clip.startTime);
+                          }
                         }}
+                        title={isClipPlaying ? '일시정지' : '이 클립 재생'}
                       >
-                        <div
-                          className="h-full bg-primary/70 rounded-full transition-all duration-100"
-                          style={{ width: `${clipProgress}%` }}
-                        />
+                        {isClipPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                      </Button>
+                      <div className="flex-1">
+                        <span className="text-sm font-medium font-mono">
+                          {formatTime(clip.startTime)} → {formatTime(clip.endTime)}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({Math.round(clipDuration)}초)
+                        </span>
                       </div>
+                    </div>
 
-                      <Textarea
-                        placeholder="이 슬라이드 하단에 표시될 텍스트를 입력하세요..."
-                        value={clip.text}
-                        onChange={(e) =>
-                          updateClipText(clip.id, e.target.value)
-                        }
-                        className="min-h-[60px] text-sm resize-none"
+                    <div
+                      className="h-2 bg-muted rounded-full cursor-pointer overflow-hidden"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const percent = (e.clientX - rect.left) / rect.width;
+                        handleSeekWithinClip(
+                          clip.id,
+                          clip,
+                          Math.max(0, Math.min(1, percent))
+                        );
+                      }}
+                    >
+                      <div
+                        className="h-full bg-primary/70 rounded-full transition-all duration-100"
+                        style={{ width: `${clipProgress}%` }}
                       />
                     </div>
-                  );
-                })}
+
+                    <Textarea
+                      placeholder="이 슬라이드 하단에 표시될 텍스트를 입력하세요..."
+                      value={clip.text}
+                      onChange={(e) => updateClipText(clip.id, e.target.value)}
+                      className="min-h-[80px] text-sm resize-none"
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* Progress dots */}
+              <div className="flex justify-center gap-1.5 pt-2 flex-wrap">
+                {confirmedClips.map((clip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentClipIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      idx === currentClipIndex
+                        ? 'bg-primary'
+                        : clip.text
+                        ? 'bg-primary/40'
+                        : 'bg-muted-foreground/30'
+                    }`}
+                    title={`클립 ${idx + 1}${clip.text ? ' (입력됨)' : ''}`}
+                  />
+                ))}
               </div>
             </div>
           )}

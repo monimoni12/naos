@@ -26,6 +26,9 @@ import java.util.UUID;
  * - S3 Presigned URL 발급
  * - 업로드 완료 처리
  * - 파일 삭제
+ * 
+ * 수정사항:
+ * - contentType을 Presigned URL 서명에서 제외 (CORS preflight 문제 해결)
  */
 @Slf4j
 @Service
@@ -50,7 +53,7 @@ public class MediaPipelineService {
      */
     public PresignedUrlResponse generateVideoPresignedUrl(Long userId, String fileName, String contentType) {
         String key = generateS3Key("videos", userId, fileName);
-        return generatePresignedUrl(key, contentType);
+        return generatePresignedUrl(key);
     }
 
     /**
@@ -58,7 +61,7 @@ public class MediaPipelineService {
      */
     public PresignedUrlResponse generateImagePresignedUrl(Long userId, String fileName, String contentType) {
         String key = generateS3Key("images", userId, fileName);
-        return generatePresignedUrl(key, contentType);
+        return generatePresignedUrl(key);
     }
 
     /**
@@ -66,7 +69,7 @@ public class MediaPipelineService {
      */
     public PresignedUrlResponse generateThumbnailPresignedUrl(Long userId, String fileName, String contentType) {
         String key = generateS3Key("thumbnails", userId, fileName);
-        return generatePresignedUrl(key, contentType);
+        return generatePresignedUrl(key);
     }
 
     /**
@@ -74,7 +77,7 @@ public class MediaPipelineService {
      */
     public PresignedUrlResponse generateProfileImagePresignedUrl(Long userId, String fileName, String contentType) {
         String key = generateS3Key("profiles", userId, fileName);
-        return generatePresignedUrl(key, contentType);
+        return generatePresignedUrl(key);
     }
 
     /**
@@ -91,15 +94,16 @@ public class MediaPipelineService {
 
     /**
      * Presigned URL 생성 (실제 S3 연동)
+     * ⚠️ 수정: contentType을 서명에서 제외하여 CORS preflight 문제 해결
      */
-    private PresignedUrlResponse generatePresignedUrl(String key, String contentType) {
+    private PresignedUrlResponse generatePresignedUrl(String key) {
         String bucketName = s3Properties.getBucket();
 
-        // PutObject 요청 생성
+        // PutObject 요청 생성 (contentType 제외!)
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key)
-                .contentType(contentType)
+                // .contentType(contentType)  // 제거: CORS preflight 403 문제 해결
                 .build();
 
         // Presigned URL 요청 생성

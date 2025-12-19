@@ -10,7 +10,8 @@ import java.util.List;
  * FeedItemDto - 피드 카드 응답 DTO
  * 
  * 피드에서 레시피 카드 하나에 표시될 정보
- * 쇼츠(릴스) 피드에서는 firstClip 정보를 활용해 첫 클립만 재생
+ * 
+ * ⭐ 수정: clips 배열 추가 (홈 피드에서 슬라이드별 구간 재생용)
  */
 @Getter
 @Setter
@@ -37,8 +38,8 @@ public class FeedItemDto {
     
     // ==================== 점수 ====================
     
-    private Double scorePopular;        // 인기 점수
-    private Double scoreCost;           // 가성비 점수
+    private Double scorePopular;            // 인기 점수
+    private Double costEfficiencyScore;     // 가성비 점수
     
     // ==================== 미디어 ====================
     
@@ -46,12 +47,16 @@ public class FeedItemDto {
     private String videoUrl;            // 영상 URL
     private Integer videoDurationSec;   // 영상 전체 길이 (초)
     
-    // ==================== 첫 번째 클립 (쇼츠/릴스용) ====================
+    // ==================== 첫 번째 클립 (쇼츠/릴스용 - 레거시) ====================
     
     private Double firstClipStartSec;   // 첫 클립 시작 시간
     private Double firstClipEndSec;     // 첫 클립 종료 시간
     private String firstClipCaption;    // 첫 클립 캡션/텍스트
     private Integer totalClipCount;     // 전체 클립 개수
+    
+    // ==================== ⭐ 전체 클립 목록 (홈 피드 슬라이드용) ====================
+    
+    private List<ClipInfo> clips;
     
     // ==================== 작성자 정보 ====================
     
@@ -82,6 +87,21 @@ public class FeedItemDto {
     private Instant createdAt;
     private Instant updatedAt;
     
+    // ==================== ⭐ 클립 정보 내부 클래스 ====================
+    
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ClipInfo {
+        private Long id;
+        private Integer indexOrd;
+        private Double startSec;
+        private Double endSec;
+        private String caption;
+    }
+    
     // ==================== 정적 팩토리 메서드 ====================
     
     /**
@@ -101,7 +121,7 @@ public class FeedItemDto {
                 .kcalEstimate(recipe.getKcalEstimate())
                 .difficulty(recipe.getDifficulty() != null ? recipe.getDifficulty().name() : null)
                 .scorePopular(recipe.getScorePopular())
-                .scoreCost(recipe.getScoreCost())
+                .costEfficiencyScore(recipe.getCostEfficiencyScore())
                 .authorId(recipe.getAuthor().getId())
                 .hideLikeCount(recipe.isHideLikeCount())
                 .disableComments(recipe.isDisableComments())

@@ -14,6 +14,7 @@ import com.moni.naos.domain.recipe.repository.RecipeClipRepository;
 import com.moni.naos.domain.recipe.repository.RecipeRepository;
 import com.moni.naos.domain.user.entity.User;
 import com.moni.naos.domain.user.repository.ProfileRepository;
+import com.moni.naos.domain.user.repository.UserRepository;
 import com.moni.naos.global.rsdata.CursorPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,9 @@ import java.util.stream.Collectors;
  * - FOLLOWING: 팔로잉한 유저의 레시피
  * - TRENDING: 인기순 정렬
  * - SHORTS: 쇼츠/릴스 (첫 번째 클립만 재생)
+ * 
+ * ⭐ 수정: User currentUser → Long userId (다른 컨트롤러와 일관성 유지)
+ * ⭐ 수정: commentCount를 삭제되지 않은 댓글만 카운트하도록 변경
  */
 @Slf4j
 @Service
@@ -46,48 +50,58 @@ public class FeedService {
     private final BookmarkRepository bookmarkRepository;
     private final CommentRepository commentRepository;
     private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
 
     // ==================== 피드 모드별 조회 ====================
 
     /**
      * 홈 피드 (전체 공개 레시피)
      */
-    public CursorPage<FeedItemDto> getHomeFeed(User currentUser, FeedFilterRequest filter) {
+    public CursorPage<FeedItemDto> getHomeFeed(Long userId, FeedFilterRequest filter) {
         List<Recipe> recipes = fetchRecipesWithFilter(filter, null);
+        User currentUser = userId != null ? userRepository.findById(userId).orElse(null) : null;
         return buildFeedPage(recipes, currentUser, filter.getSize());
     }
 
     /**
      * 팔로잉 피드
      */
-    public CursorPage<FeedItemDto> getFollowingFeed(User currentUser, FeedFilterRequest filter) {
-        // 팔로잉 목록 조회
-        List<Long> followingIds = followRepository.findFolloweeIdsByFollower(currentUser);
+    public CursorPage<FeedItemDto> getFollowingFeed(Long userId, FeedFilterRequest filter) {
+        log.info("🔍 getFollowingFeed 호출 - userId: {}", userId);
+        
+        // ⭐ userId로 팔로잉 목록 조회 (User 대신 Long 사용)
+        List<Long> followingIds = followRepository.findFolloweeIdsByFollowerId(userId);
+        
+        log.info("🔍 followingIds: {}", followingIds);
         
         if (followingIds.isEmpty()) {
+            log.info("🔍 followingIds가 비어있어서 빈 결과 반환");
             return CursorPage.empty();
         }
         
         List<Recipe> recipes = fetchRecipesWithFilter(filter, followingIds);
+        
+        log.info("🔍 조회된 레시피 수: {}", recipes.size());
+        
+        User currentUser = userRepository.findById(userId).orElse(null);
         return buildFeedPage(recipes, currentUser, filter.getSize());
     }
 
     /**
      * 트렌딩 피드 (인기순)
      */
-    public CursorPage<FeedItemDto> getTrendingFeed(User currentUser, FeedFilterRequest filter) {
+    public CursorPage<FeedItemDto> getTrendingFeed(Long userId, FeedFilterRequest filter) {
         List<Recipe> recipes = fetchTrendingRecipes(filter);
+        User currentUser = userId != null ? userRepository.findById(userId).orElse(null) : null;
         return buildFeedPage(recipes, currentUser, filter.getSize());
     }
 
     /**
-     * 쇼츠(릴스) 피드
-     * - 기본적으로 트렌딩과 동일하지만 응답에 firstClip 정보 포함
-     * - 프론트에서 firstClipStartSec ~ firstClipEndSec 구간만 재생
+     * 쇼츠 (릴스) 피드
      */
-    public CursorPage<FeedItemDto> getShortsFeed(User currentUser, FeedFilterRequest filter) {
-        // 쇼츠는 인기순 + 짧은 영상 우선
+    public CursorPage<FeedItemDto> getShortsFeed(Long userId, FeedFilterRequest filter) {
         List<Recipe> recipes = fetchTrendingRecipes(filter);
+        User currentUser = userId != null ? userRepository.findById(userId).orElse(null) : null;
         return buildFeedPage(recipes, currentUser, filter.getSize());
     }
 
@@ -97,8 +111,6 @@ public class FeedService {
      * 필터 조건에 맞는 레시피 조회
      */
     private List<Recipe> fetchRecipesWithFilter(FeedFilterRequest filter, List<Long> authorIds) {
-        // TODO: QueryDSL 또는 Specification으로 동적 쿼리 최적화
-        
         List<Recipe> allRecipes;
         
         if (authorIds != null && !authorIds.isEmpty()) {
@@ -117,7 +129,7 @@ public class FeedService {
                 .filter(r -> applyFilter(r, filter))
                 .filter(r -> applyCursor(r, filter.getCursor(), filter.getSortBy()))
                 .sorted(getComparator(filter.getSortBy()))
-                .limit(filter.getSize() + 1) // +1 for hasNext check
+                .limit(filter.getSize() + 1)
                 .collect(Collectors.toList());
     }
 
@@ -138,28 +150,24 @@ public class FeedService {
      * 필터 조건 적용
      */
     private boolean applyFilter(Recipe recipe, FeedFilterRequest filter) {
-        // 가격 필터
         if (filter.getMaxPrice() != null && recipe.getPriceEstimate() != null) {
             if (recipe.getPriceEstimate() > filter.getMaxPrice()) {
                 return false;
             }
         }
         
-        // 조리시간 필터
         if (filter.getMaxCookTime() != null && recipe.getCookTimeMin() != null) {
             if (recipe.getCookTimeMin() > filter.getMaxCookTime()) {
                 return false;
             }
         }
         
-        // 카테고리 필터
         if (filter.hasCategory()) {
             if (!filter.getCategory().equals(recipe.getCategory())) {
                 return false;
             }
         }
         
-        // 난이도 필터
         if (filter.hasDifficulty()) {
             if (recipe.getDifficulty() != filter.getDifficulty()) {
                 return false;
@@ -174,10 +182,8 @@ public class FeedService {
      */
     private boolean applyCursor(Recipe recipe, Long cursor, FeedFilterRequest.SortBy sortBy) {
         if (cursor == null) {
-            return true; // 커서 없으면 전부 포함
+            return true;
         }
-        
-        // 최신순: ID가 cursor보다 작은 것만
         return recipe.getId() < cursor;
     }
 
@@ -186,9 +192,8 @@ public class FeedService {
      */
     private Comparator<Recipe> getComparator(FeedFilterRequest.SortBy sortBy) {
         if (sortBy == FeedFilterRequest.SortBy.COST_EFFICIENCY) {
-            return Comparator.comparing(Recipe::getScoreCost, Comparator.nullsLast(Comparator.reverseOrder()));
+            return Comparator.comparing(Recipe::getCostEfficiencyScore, Comparator.nullsLast(Comparator.reverseOrder()));
         }
-        // 기본: 최신순 (ID 역순)
         return Comparator.comparing(Recipe::getId, Comparator.reverseOrder());
     }
 
@@ -236,10 +241,22 @@ public class FeedService {
                     item.setVideoDurationSec(asset.getDurationS());
                 });
         
-        // 첫 번째 클립 정보 (쇼츠/릴스용)
+        // 클립 정보
         List<RecipeClip> clips = recipeClipRepository.findByRecipeOrderByIndexOrdAsc(recipe);
         item.setTotalClipCount(clips.size());
         
+        List<FeedItemDto.ClipInfo> clipInfos = clips.stream()
+                .map(clip -> FeedItemDto.ClipInfo.builder()
+                        .id(clip.getId())
+                        .indexOrd(clip.getIndexOrd())
+                        .startSec(clip.getStartSec())
+                        .endSec(clip.getEndSec())
+                        .caption(clip.getCaption())
+                        .build())
+                .collect(Collectors.toList());
+        item.setClips(clipInfos);
+        
+        // 첫 번째 클립 정보 (쇼츠/릴스용)
         if (!clips.isEmpty()) {
             RecipeClip firstClip = clips.get(0);
             item.setFirstClipStartSec(firstClip.getStartSec());
@@ -250,7 +267,8 @@ public class FeedService {
         // 상호작용 수
         item.setLikeCount(likeRepository.countByRecipe(recipe));
         item.setBookmarkCount(bookmarkRepository.countByRecipe(recipe));
-        item.setCommentCount(commentRepository.countByRecipe(recipe));
+        // ⭐ 수정: 삭제되지 않은 댓글만 카운트
+        item.setCommentCount(commentRepository.countByRecipeAndNotDeleted(recipe));
         
         // 현재 유저 상태
         if (currentUser != null) {

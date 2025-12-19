@@ -1,5 +1,7 @@
 package com.moni.naos.domain.recipe.service;
 
+import com.moni.naos.domain.ai.service.AiAnalysisService;
+import com.moni.naos.domain.ai.dto.CostAnalysisResult;
 import com.moni.naos.domain.recipe.dto.*;
 import com.moni.naos.domain.recipe.entity.Recipe;
 import com.moni.naos.domain.recipe.entity.RecipeAsset;
@@ -25,7 +27,7 @@ import java.util.List;
  * 2. 클리핑 완료 → saveClips
  * 3. 썸네일 선택 → setThumbnail
  * 4. 상세 정보 입력 → saveDetails
- * 5. AI 분석 요청 → requestAnalysis
+ * 5. AI 분석 요청 → requestAnalysis (Flask 호출)
  * 6. 발행 → publish
  */
 @Slf4j
@@ -38,6 +40,7 @@ public class RecipeService {
     private final RecipeClipRepository recipeClipRepository;
     private final RecipeAssetRepository recipeAssetRepository;
     private final UserRepository userRepository;
+    private final AiAnalysisService aiAnalysisService;
 
     // ==================== 업로드 플로우 ====================
 
@@ -150,19 +153,38 @@ public class RecipeService {
     }
 
     /**
-     * Step 5: AI 분석 요청
+     * Step 5: AI 분석 요청 (Flask 호출!)
+     * ⭐ 수정: breakdown, nutrition 포함하여 반환
      */
     @Transactional
     public RecipeAnalysisResponse requestAnalysis(Long userId, Long recipeId) {
         Recipe recipe = getRecipeWithOwnerCheck(userId, recipeId);
-
-        // TODO: Flask AI 서버 호출
-
-        return RecipeAnalysisResponse.builder()
-                .recipeId(recipeId)
-                .status("PENDING")
-                .message("AI 분석이 요청되었습니다.")
-                .build();
+        
+        log.info("AI 분석 요청: recipeId={}, userId={}", recipeId, userId);
+        
+        // Flask AI 서버 호출
+        CostAnalysisResult result = aiAnalysisService.analyzeAndSaveCostScore(recipeId);
+        
+        // ⭐ 팩토리 메서드 사용하여 응답 생성 (breakdown, nutrition 포함)
+        RecipeAnalysisResponse response = RecipeAnalysisResponse.fromCostAnalysisResult(recipeId, result);
+        
+        // DB에 저장된 최신 값 반영 (priceEstimate, kcalEstimate)
+        if ("COMPLETED".equals(response.getStatus())) {
+            Recipe updatedRecipe = recipeRepository.findById(recipeId).orElse(recipe);
+            response.setPriceEstimate(updatedRecipe.getPriceEstimate());
+            
+            // nutrition에서 kcalEstimate를 가져오지 못한 경우 DB 값 사용
+            if (response.getNutrition() == null || response.getNutrition().getKcalEstimate() == null) {
+                // nutrition이 없으면 새로 생성
+                if (response.getNutrition() == null) {
+                    response.setNutrition(RecipeAnalysisResponse.Nutrition.builder()
+                            .kcalEstimate(updatedRecipe.getKcalEstimate())
+                            .build());
+                }
+            }
+        }
+        
+        return response;
     }
 
     /**

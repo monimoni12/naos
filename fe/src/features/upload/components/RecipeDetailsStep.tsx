@@ -4,16 +4,20 @@
  * 레시피 상세 정보 입력 단계
  * 위치: src/features/upload/components/RecipeDetailsStep.tsx
  *
- * 변경사항 (Lovable → Next.js):
- * - "use client" 추가
- * - react-router-dom → next/navigation
- * - supabase → Spring BE API 호출
- * - 더미 AI 분석 → 실제 API 호출
+ * BE 업로드 플로우에 맞게 수정:
+ * 1. POST /draft           → 임시 레시피 생성
+ * 2. PUT /{id}/clips       → 클립 정보 저장
+ * 3. PUT /{id}/thumbnail   → 썸네일 설정
+ * 4. PUT /{id}/details     → 상세 정보 입력
+ * 5. POST /{id}/analyze    → AI 분석 요청
+ * 6. POST /{id}/publish    → 최종 발행
+ * 
+ * ⭐ 수정: requestAnalysis의 BE 응답 파싱 부분만 수정 (199-217줄)
  */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Sparkles } from 'lucide-react';
+import { ChevronLeft, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,13 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { authFetch } from '@/lib/auth';
 
 import type { ScriptSegment, AnalysisData } from '../types/upload.types';
-import {
-  analyzeRecipeWithTransform,
-  parseIngredients,
-} from '../api/analyzeRecipe';
+import { parseIngredients } from '../api/analyzeRecipe';
 import { uploadVideo, uploadThumbnail } from '../api/uploadMedia';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090';
 
 interface RecipeDetailsStepProps {
   file: File | null;
@@ -76,11 +80,171 @@ export default function RecipeDetailsStep({
   // 업로드 state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
 
-  // AI 분석 실행
+  // 임시 레시피 ID (draft 생성 후 저장)
+  const [draftId, setDraftId] = useState<number | null>(null);
+
+  /**
+   * 1. Draft 생성
+   * POST /api/recipes/draft
+   */
+  const createDraft = async (videoUrl: string): Promise<number> => {
+    const response = await authFetch(`${API_BASE_URL}/api/recipes/draft`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: segments[0]?.text?.slice(0, 50) || '새 레시피',
+        videoUrl,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('임시 레시피 생성 실패');
+    }
+
+    const data = await response.json();
+    return data.id;
+  };
+
+  /**
+   * 2. 클립 정보 저장
+   * PUT /api/recipes/{id}/clips
+   */
+  const saveClips = async (recipeId: number): Promise<void> => {
+    const clips = segments.map((seg, idx) => ({
+      orderIndex: idx,          // ⭐ BE ClipCreateRequest 필드명에 맞춤
+      startSec: seg.startTime || 0,
+      endSec: seg.endTime || 0,
+      description: seg.text,    // ⭐ BE에서 description → caption으로 저장됨
+    }));
+
+    const response = await authFetch(
+      `${API_BASE_URL}/api/recipes/${recipeId}/clips`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(clips),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('클립 정보 저장 실패');
+    }
+  };
+
+  /**
+   * 3. 썸네일 설정
+   * PUT /api/recipes/{id}/thumbnail
+   */
+  const setThumbnailUrl = async (
+    recipeId: number,
+    thumbnailUrl: string
+  ): Promise<void> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/api/recipes/${recipeId}/thumbnail`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ url: thumbnailUrl }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('썸네일 설정 실패');
+    }
+  };
+
+  /**
+   * 4. 상세 정보 입력
+   * PUT /api/recipes/{id}/details
+   */
+  const saveDetails = async (recipeId: number): Promise<void> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/api/recipes/${recipeId}/details`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: segments[0]?.text?.slice(0, 50) || '새 레시피',
+          caption: message.trim() || segments.map((s) => s.text).join('\n\n'),  // ⭐ description → caption
+          category,
+          cookTimeMin: cookTime,           // ⭐ cookTime → cookTimeMin
+          servings,
+          dietTags: [],                    // ⭐ 추가
+          hideLikeCount: hideLikes,        // ⭐ hideLikes → hideLikeCount
+          hideShareCount: hideShares,      // ⭐ hideShares → hideShareCount
+          disableComments: hideComments,   // ⭐ hideComments → disableComments
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('상세 정보 저장 실패');
+    }
+  };
+
+  /**
+   * 5. AI 분석 요청
+   * POST /api/recipes/{id}/analyze
+   * 
+   * ⭐ 수정됨: BE 응답 구조에 맞게 파싱
+   */
+  const requestAnalysis = async (recipeId: number): Promise<AnalysisData> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/api/recipes/${recipeId}/analyze`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('AI 분석 요청 실패');
+    }
+
+    const data = await response.json();
+
+    // ⭐ BE 응답 → FE AnalysisData 변환 (수정됨)
+    return {
+      nutrition: {
+        // ⭐ nutrition 객체에서 가져옴
+        calories: data.nutrition?.kcalEstimate || 0,
+        protein: data.nutrition?.proteinG || 0,
+        carbs: data.nutrition?.carbsG || 0,
+        fat: data.nutrition?.fatG || 0,
+        fiber: data.nutrition?.fiberG || 0,
+        sodium: data.nutrition?.sodiumMg || 0,
+      },
+      valueScore: {
+        total: data.costEfficiencyScore || 0,
+        // ⭐ BE 필드명에 맞게 수정
+        priceEfficiency: data.breakdown?.priceEfficiency || 0,
+        nutritionBalance: data.breakdown?.nutritionBalance || 0,
+        timeEfficiency: data.breakdown?.timeEfficiency || 0,
+        accessibility: data.breakdown?.ingredientAccessibility || 0,
+        estimatedPrice: data.priceEstimate || 0,
+      },
+    };
+  };
+
+  /**
+   * 6. 레시피 발행
+   * POST /api/recipes/{id}/publish
+   */
+  const publishRecipe = async (recipeId: number): Promise<void> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/api/recipes/${recipeId}/publish`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('레시피 발행 실패');
+    }
+  };
+
+  // AI 분석 실행 (Draft 먼저 생성 필요)
   const handleAnalyze = async () => {
     if (!ingredients.trim()) {
       setAnalysisError('재료를 입력해주세요.');
+      return;
+    }
+
+    if (!file) {
+      setAnalysisError('업로드할 파일이 없습니다.');
       return;
     }
 
@@ -88,29 +252,94 @@ export default function RecipeDetailsStep({
     setAnalysisError(null);
 
     try {
-      const result = await analyzeRecipeWithTransform(
-        segments[0]?.text?.slice(0, 50) || '레시피',
-        ingredients,
-        cookTime,
-        difficulty,
-        servings
-      );
+      let recipeId = draftId;
+
+      // Draft가 없으면 먼저 생성
+      if (!recipeId) {
+        setUploadStatus('영상 업로드 중...');
+        const videoUrl = await uploadVideo(file, (progress) => {
+          setUploadProgress(progress * 0.5);
+        });
+
+        setUploadStatus('레시피 생성 중...');
+        recipeId = await createDraft(videoUrl);
+        setDraftId(recipeId);
+
+        // 클립 정보 저장
+        if (segments.length > 0) {
+          await saveClips(recipeId);
+        }
+
+        // 썸네일 업로드 및 설정
+        if (thumbnailBlob) {
+          setUploadStatus('썸네일 업로드 중...');
+          const thumbUrl = await uploadThumbnail(
+            thumbnailBlob,
+            `thumb_${Date.now()}.jpg`
+          );
+          await setThumbnailUrl(recipeId, thumbUrl);
+        }
+
+        // 상세 정보 저장
+        setUploadStatus('상세 정보 저장 중...');
+        await saveDetails(recipeId);
+      }
+
+      // AI 분석 요청
+      setUploadStatus('AI 분석 중...');
+      const result = await requestAnalysis(recipeId);
       setAnalysisData(result);
+      setUploadStatus('');
     } catch (error) {
       console.error('AI 분석 오류:', error);
-      setAnalysisError('분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setAnalysisError(
+        error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
+      );
     } finally {
       setIsAnalyzing(false);
+      setUploadProgress(0);
     }
   };
 
   // 임시 저장
   const handleSaveDraft = async () => {
-    // TODO: 드래프트 저장 API 호출
-    console.log('임시 저장');
+    if (!file) {
+      alert('업로드할 파일이 없습니다.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      let recipeId = draftId;
+
+      if (!recipeId) {
+        setUploadStatus('영상 업로드 중...');
+        const videoUrl = await uploadVideo(file, (progress) => {
+          setUploadProgress(progress * 0.7);
+        });
+
+        setUploadStatus('임시 저장 중...');
+        recipeId = await createDraft(videoUrl);
+        setDraftId(recipeId);
+      }
+
+      // 상세 정보 저장
+      await saveDetails(recipeId);
+
+      alert('임시 저장되었습니다.');
+    } catch (error) {
+      console.error('임시 저장 오류:', error);
+      alert('임시 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadStatus('');
+    }
   };
 
-  // 공유하기 (업로드)
+  // 공유하기 (전체 업로드 플로우)
   const handleShare = async () => {
     if (!file) {
       alert('업로드할 파일이 없습니다.');
@@ -126,60 +355,72 @@ export default function RecipeDetailsStep({
     setUploadProgress(0);
 
     try {
-      // TODO: 인증 토큰 가져오기
-      const token = undefined; // await getAuthToken();
+      let recipeId = draftId;
 
-      // 1. 비디오 업로드
-      const videoUrl = await uploadVideo(file, token, (progress) => {
-        setUploadProgress(progress * 0.7); // 70%까지
-      });
+      // 1. Draft가 없으면 영상 업로드 + Draft 생성
+      if (!recipeId) {
+        setUploadStatus('영상 업로드 중...');
+        const videoUrl = await uploadVideo(file, (progress) => {
+          setUploadProgress(progress * 0.4);
+        });
 
-      // 2. 썸네일 업로드
-      let thumbnailUrl: string | undefined;
-      if (thumbnailBlob) {
-        thumbnailUrl = await uploadThumbnail(
-          thumbnailBlob,
-          `thumb_${Date.now()}.jpg`,
-          token
-        );
-        setUploadProgress(80);
+        setUploadStatus('레시피 생성 중...');
+        recipeId = await createDraft(videoUrl);
+        setDraftId(recipeId);
+        setUploadProgress(50);
       }
 
-      // 3. 레시피 데이터 생성 및 저장
-      const recipeData = {
-        title: segments[0]?.text?.slice(0, 50) || '새 레시피',
-        description: message.trim() || segments.map((s) => s.text).join('\n\n'),
-        category,
-        difficulty,
-        cook_time: cookTime,
-        servings,
-        ingredients: parseIngredients(ingredients),
-        steps: segments.map((seg, idx) => ({
-          step: idx + 1,
-          description: seg.text,
-          startTime: seg.startTime,
-          endTime: seg.endTime,
-        })),
-        video_url: videoUrl,
-        thumbnail_url: thumbnailUrl,
-        nutrition: analysisData?.nutrition,
-        value_score: analysisData?.valueScore.total,
-        hide_comments: hideComments,
-        hide_likes: hideLikes,
-        hide_shares: hideShares,
-      };
+      // 2. 클립 정보 저장
+      if (segments.length > 0) {
+        setUploadStatus('클립 정보 저장 중...');
+        await saveClips(recipeId);
+        setUploadProgress(60);
+      }
 
-      // TODO: 레시피 저장 API 호출
-      console.log('레시피 데이터:', recipeData);
+      // 3. 썸네일 업로드 및 설정
+      if (thumbnailBlob) {
+        setUploadStatus('썸네일 업로드 중...');
+        const thumbUrl = await uploadThumbnail(
+          thumbnailBlob,
+          `thumb_${Date.now()}.jpg`
+        );
+        await setThumbnailUrl(recipeId, thumbUrl);
+        setUploadProgress(70);
+      }
+
+      // 4. 상세 정보 저장
+      setUploadStatus('상세 정보 저장 중...');
+      await saveDetails(recipeId);
+      setUploadProgress(80);
+
+      // 5. AI 분석 (아직 안 했으면)
+      if (!analysisData && ingredients.trim()) {
+        setUploadStatus('AI 분석 중...');
+        try {
+          await requestAnalysis(recipeId);
+        } catch (e) {
+          console.warn('AI 분석 실패, 계속 진행:', e);
+        }
+        setUploadProgress(90);
+      }
+
+      // 6. 발행
+      setUploadStatus('발행 중...');
+      await publishRecipe(recipeId);
       setUploadProgress(100);
 
       // 성공 후 홈으로 이동
       router.push('/');
     } catch (error) {
       console.error('업로드 오류:', error);
-      alert('업로드 중 오류가 발생했습니다.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : '업로드 중 오류가 발생했습니다.'
+      );
     } finally {
       setIsUploading(false);
+      setUploadStatus('');
     }
   };
 
@@ -210,7 +451,7 @@ export default function RecipeDetailsStep({
             />
           </div>
 
-          {/* 카테고리 */}
+          {/* 카테고리 - 원본 그대로! */}
           <div className="space-y-2 pt-4 border-t">
             <Label htmlFor="category" className="text-base font-semibold">
               카테고리
@@ -244,39 +485,52 @@ export default function RecipeDetailsStep({
                 </div>
               </div>
               <Slider
-                min={0}
+                id="cookTime"
+                value={[cookTime]}
+                onValueChange={(val) => setCookTime(val[0])}
+                min={5}
                 max={120}
                 step={5}
-                value={[cookTime]}
-                onValueChange={(value: number[]) => setCookTime(value[0])}
-                className="w-full"
               />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0분</span>
-                <span>120분</span>
-              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="difficulty" className="text-base font-semibold">
-                난이도
-              </Label>
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">난이도</Label>
               <Select
                 value={difficulty}
-                onValueChange={(v: string) =>
-                  setDifficulty(v as typeof difficulty)
+                onValueChange={(val) =>
+                  setDifficulty(val as '쉬움' | '보통' | '어려움')
                 }
               >
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="난이도 선택" />
+                <SelectTrigger>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="쉬움">⭐ 쉬움</SelectItem>
-                  <SelectItem value="보통">⭐⭐ 보통</SelectItem>
-                  <SelectItem value="어려움">⭐⭐⭐ 어려움</SelectItem>
+                  <SelectItem value="쉬움">쉬움</SelectItem>
+                  <SelectItem value="보통">보통</SelectItem>
+                  <SelectItem value="어려움">어려움</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* 인분 수 */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">인분 수</Label>
+              <div className="px-3 py-1.5 bg-primary/10 rounded-lg">
+                <span className="text-sm font-bold text-primary">
+                  {servings}인분
+                </span>
+              </div>
+            </div>
+            <Slider
+              value={[servings]}
+              onValueChange={(val) => setServings(val[0])}
+              min={1}
+              max={10}
+              step={1}
+            />
           </div>
 
           {/* AI 분석 */}
@@ -289,8 +543,17 @@ export default function RecipeDetailsStep({
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !ingredients.trim()}
               >
-                <Sparkles className="mr-2 h-4 w-4" />
-                {isAnalyzing ? '분석 중...' : '✨ 분석하기'}
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {uploadStatus || '분석 중...'}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    분석하기
+                  </>
+                )}
               </Button>
             </div>
 
@@ -510,7 +773,14 @@ export default function RecipeDetailsStep({
               onClick={handleShare}
               disabled={isUploading}
             >
-              {isUploading ? `업로드 중... ${uploadProgress}%` : '공유하기'}
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploadStatus || `${uploadProgress}%`}
+                </>
+              ) : (
+                '공유하기'
+              )}
             </Button>
           </div>
         </div>

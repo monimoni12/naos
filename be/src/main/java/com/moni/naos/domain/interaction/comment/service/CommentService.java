@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 /**
  * CommentService - 댓글 비즈니스 로직
  * - Redis Pub/Sub으로 실시간 브로드캐스트
+ * 
+ * ⭐ 수정: 부모 댓글 삭제 시 대댓글도 함께 삭제 (Cascade Soft Delete)
  */
 @Slf4j
 @Service
@@ -35,7 +37,7 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
-    private final RedisPublisher redisPublisher;  // ⭐ Redis
+    private final RedisPublisher redisPublisher;
 
     @Transactional
     public CommentResponse create(Long userId, Long recipeId, CommentCreateRequest request) {
@@ -119,6 +121,19 @@ public class CommentService {
         }
 
         Long recipeId = comment.getRecipe().getId();
+        
+        // ⭐ 대댓글(자식 댓글)도 함께 삭제 (Cascade Soft Delete)
+        List<Comment> children = commentRepository.findByParentOrderByCreatedAtAsc(comment);
+        for (Comment child : children) {
+            if (child.getDeletedAt() == null) {  // 아직 삭제되지 않은 것만
+                child.setDeletedAt(Instant.now());
+                child.setText("삭제된 댓글입니다.");
+                commentRepository.save(child);
+                log.info("대댓글 삭제: commentId={}", child.getId());
+            }
+        }
+        
+        // 부모 댓글 삭제
         comment.setDeletedAt(Instant.now());
         comment.setText("삭제된 댓글입니다.");
         commentRepository.save(comment);
@@ -176,7 +191,7 @@ public class CommentService {
     private void broadcastComment(Comment comment, Long recipeId, String type) {
         String authorName = null, authorUsername = null, authorProfileUrl = null;
         if (comment.getUser() != null && comment.getUser().getProfile() != null) {
-            authorName = comment.getUser().getProfile().getFullName();  // ⭐ 변경
+            authorName = comment.getUser().getProfile().getFullName();
             authorUsername = comment.getUser().getProfile().getUsername();
             authorProfileUrl = comment.getUser().getProfile().getAvatarUrl();
         }

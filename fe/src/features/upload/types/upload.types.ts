@@ -27,7 +27,7 @@ export interface TranscriptionSegment {
 
 // ===== 업로드 스텝 =====
 
-export type UploadStep = "upload" | "clipping" | "thumbnail" | "details";
+export type UploadStep = 'upload' | 'clipping' | 'thumbnail' | 'details';
 
 // ===== AI 분석 관련 =====
 
@@ -40,7 +40,7 @@ export interface AnalysisRequest {
   title: string;
   ingredients: IngredientInput[];
   cook_time_min: number;
-  difficulty: "쉬움" | "보통" | "어려움";
+  difficulty: '쉬움' | '보통' | '어려움';
   servings: number;
 }
 
@@ -135,6 +135,6 @@ export interface PresignedUrlRequest {
 
 export interface PresignedUrlResponse {
   uploadUrl: string;
-  fileUrl: string;
+  publicUrl: string;
   key: string;
 }

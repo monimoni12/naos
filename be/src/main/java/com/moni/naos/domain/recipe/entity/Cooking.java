@@ -13,14 +13,11 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "cooking_session",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uq_cooking_user_recipe",
-                columnNames = {"user_id", "recipe_id"}
-        ),
-        indexes = @Index(
-                name = "idx_cooking_user_started",
-                columnList = "user_id, startedAt"
-        )
+        // ⭐ uniqueConstraint 제거 → 같은 레시피 여러 번 요리 기록 허용
+        indexes = {
+                @Index(name = "idx_cooking_user_started", columnList = "user_id, startedAt"),
+                @Index(name = "idx_cooking_user_recipe_active", columnList = "user_id, recipe_id, active")
+        }
 )
 public class Cooking {
 

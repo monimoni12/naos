@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +40,7 @@ public class CookingService {
 
     /**
      * 요리 시작
+     * ⭐ 수정: 같은 레시피만 중복 체크 (여러 레시피 동시 요리 가능)
      */
     @Transactional
     public CookingSessionResponse startCooking(Long userId, Long recipeId) {
@@ -48,11 +50,13 @@ public class CookingService {
         Recipe recipe = recipeRepository.findById(recipeId)
                 .orElseThrow(() -> new IllegalArgumentException("레시피를 찾을 수 없습니다."));
 
-        // 이미 활성 세션이 있는지 확인
-        cookingRepository.findByUserAndActiveTrue(user)
-                .ifPresent(session -> {
-                    throw new IllegalStateException("이미 진행 중인 요리가 있습니다.");
-                });
+        // ⭐ 변경: 같은 레시피에 대해서만 활성 세션 체크
+        Optional<Cooking> existingSession = cookingRepository.findByUserAndRecipeAndActiveTrue(user, recipe);
+        if (existingSession.isPresent()) {
+            // 이미 이 레시피를 요리 중이면 기존 세션 반환
+            log.info("기존 요리 세션 반환: userId={}, recipeId={}", userId, recipeId);
+            return CookingSessionResponse.fromEntity(existingSession.get());
+        }
 
         // 새 세션 생성
         Cooking cooking = Cooking.builder()
@@ -110,6 +114,27 @@ public class CookingService {
     }
 
     /**
+     * ⭐ 추가: 레시피 ID로 요리 종료 (세션 ID 모를 때)
+     */
+    @Transactional
+    public CookingSessionResponse endCookingByRecipe(Long userId, Long recipeId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new IllegalArgumentException("레시피를 찾을 수 없습니다."));
+
+        Cooking cooking = cookingRepository.findByUserAndRecipeAndActiveTrue(user, recipe)
+                .orElseThrow(() -> new IllegalArgumentException("활성 세션을 찾을 수 없습니다."));
+
+        cooking.endCooking();
+        Cooking saved = cookingRepository.save(cooking);
+
+        log.info("요리 종료 (by recipeId): userId={}, recipeId={}", userId, recipeId);
+        return CookingSessionResponse.fromEntity(saved);
+    }
+
+    /**
      * 진행 상황 업데이트
      */
     @Transactional
@@ -158,7 +183,7 @@ public class CookingService {
     }
 
     /**
-     * 활성 세션 조회
+     * 활성 세션 조회 (단일 - 기존 호환)
      */
     public CookingSessionResponse getActiveSession(Long userId) {
         User user = userRepository.findById(userId)
@@ -167,6 +192,32 @@ public class CookingService {
         return cookingRepository.findByUserAndActiveTrue(user)
                 .map(CookingSessionResponse::fromEntity)
                 .orElse(null);
+    }
+
+    /**
+     * ⭐ 추가: 활성 세션 목록 조회 (여러 개)
+     */
+    public List<CookingSessionResponse> getActiveSessions(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        return cookingRepository.findByUserAndActiveTrueOrderByStartedAtDesc(user)
+                .stream()
+                .map(CookingSessionResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * ⭐ 추가: 특정 레시피의 요리 상태 확인
+     */
+    public boolean isCooking(Long userId, Long recipeId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return false;
+
+        Recipe recipe = recipeRepository.findById(recipeId).orElse(null);
+        if (recipe == null) return false;
+
+        return cookingRepository.findByUserAndRecipeAndActiveTrue(user, recipe).isPresent();
     }
 
     /**
