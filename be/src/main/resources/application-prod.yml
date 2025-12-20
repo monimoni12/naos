@@ -12,6 +12,23 @@ spring:
       host: redis
       port: 6379
 
+  # ==================== Mail 설정 (운영 환경) ====================
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ilovemamegoma@gmail.com
+    password: psiklmgpkuswacij
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 # ==================== Custom (운영) ====================
 custom:
   site:
@@ -20,8 +37,8 @@ custom:
       secure: false
       sameSite: Lax
     cookieDomain: ""
-    frontUrl: "http://3.34.99.116:3000"
-    backUrl: "http://3.34.99.116:8090"
+    frontUrl: "https://wearenaos.com"
+    backUrl: "https://wearenaos.com"
   jwt:
     secretKey: "naos-jwt-secret-key-must-be-at-least-32-characters-long-for-security"
 
