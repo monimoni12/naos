@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: naos-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-naos1234!}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-naos}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - naos-network
+
+  redis:
+    image: redis:alpine
+    container_name: naos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - naos-network
+
+  ai-server:
+    build: ./ai-server
+    container_name: naos-ai
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+    networks:
+      - naos-network
+
+  be:
+    build: ./be
+    container_name: naos-be
+    ports:
+      - "8090:8090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - REDIS_HOST=redis
+      - AI_SERVER_URL=http://ai-server:5000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - GMAIL_USERNAME=${GMAIL_USERNAME}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ai-server:
+        condition: service_started
+    networks:
+      - naos-network
+
+  fe:
+    build: ./fe
+    container_name: naos-fe
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://be:8090
+    depends_on:
+      - be
+    networks:
+      - naos-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  naos-network:
+    driver: bridge
