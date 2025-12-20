@@ -11,46 +11,121 @@
  | FE, BE, PM |
  | [GitHub](https://github.com/monimoni12) |
  
- [2차보고서](https://www.canva.com/design/DAG4dwHqDnk/_DvqoXL30weUYLYIfTMLkg/edit?utm_content=DAG4dwHqDnk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
- 
+ <br/>
  <br/>
 
----
+# 0. Getting Started (시작하기)
+```bash
+ _   _    _    ___  ____  
+| \ | |  / \  / _ \/ ___| 
+|  \| | / _ \| | | \___ \ 
+| |\  |/ ___ \ |_| |___) |
+|_| \_/_/   \_\___/|____/ 
 
-## Project Summary
-### 문제 정의
-> 다이어트 레시피를 customer가 지속적으로, 편리하게 사용하도록 돕는 서비스는 아직 어플 시장에서 제공되고 있지 않음
-#### 문제인식
-- 현대인이라면 누구나 공감하는 범용적 pain point, 다이어트
-   - 2024년 기준 국내 다이어트 시장 규모 : 10조원
-   - 다이어트 콘텐츠, 헬스케어 앱 소비율 높음
-- 다이어트 레시피에 대한 관심도 높음
-   - 다이어트 요리책의 다양화(yes24, 쿠팡)
-   - 유튜브: 다양한 다이어트 레시피 콘텐츠 인기
+:: NAOS - AI Recipe Platform ::
+```
+🖱️ [서비스 링크](https://wearenaos.com/)
+
+**테스트 계정**
+- ID: `seed@naos.com`
+- PW: `seed1234!`
+
+<br/>
+<br/>
+
+# 1. Project Overview (프로젝트 개요)
+### 프로젝트 이름: NAOS
+### 프로젝트 설명:
+
+**NAOS**는 요리와 영상의 병행이 어려운 문제를 해결하는  
+**건강 맞춤 AI 레시피 추천 플랫폼**입니다.
+
+
+Whisper 기반 영상 자동분할 기술을 최초로 적용하여,  
+레시피 영상을 단계별로 자동 분리하고 각 단계를 **자동 반복재생**합니다.
+
+- 🎬 **Whisper 기반 영상 자동분할**: 레시피 영상을 조리 단계별로 자동 분리
+- 💰 **AI 가성비 점수**: GPT가 가격·영양·시간을 분석해 0~100점 산출
+- 🥗 **건강 맞춤 필터**: 저탄수화물, 고단백 등 카테고리별 검색
+- 👥 **SNS형 커뮤니티**: 팔로우, 좋아요, 댓글, 스크랩 기능
+
+> 20~34세 MZ세대의 '헬시 플레저' 라이프스타일을 위한  
+> 새로운 요리 경험을 제공합니다.
+
+<br/>
+<br/>
+
+## 2. 문제 정의
+> 왜 NAOS인가? 기존 요리 경험의 4대 문제점
+
+### “헬시 플레저 + 요리 영상 시장의 폭발적 성장”: 시장분석
+- MZ 중심 헬시 플레저 소비 증가
+- 요리 영상 소비 증가(TikTok·Instagram Reels 트렌드)
+- “집밥 재발견” 트렌드
+- 홈트 + 홈쿡 동시 성장
+- YouTube/Instagram은 ‘보기 좋은 콘텐츠’는 많지만 ‘따라하기 쉬운 콘텐츠’는 부족
+
+### 문제 1 — 요리 중 영상 병행 어려움
+- 화면 꺼짐
+- 영상 진행 속도와 조리 속도 불일치
+- 손이 젖어 있어 조작 불편
+- 뒤로 가기 시 다른 영상으로 넘어가는 UX 문제
+
+### 문제 2 — 다이어트 지속의 어려움
+- 건강 기준이 사람마다 다름
+- 명확한 ‘맞춤형 건강 레시피’가 존재하지 않음
+
+### 문제 3 — 비용·재료 구매의 부담
+- “이 요리 만드는 데 얼마 들지?” 감이 없음
+- 초보자일수록 장벽이 큼
+
+### 문제 4 — 정보 과잉, 개인에게 맞지 않는 레시피 난립
+- 유튜브·블로그에 ‘나에게 맞지 않는 정보’가 너무 많음
+- 체계적 큐레이션 없음
+
+<br/>
 </br>
-  
-#### 목표 사용자
-> 20~34세 MZ 세대로 국소화
 
-모든 세대가 공감하는 painpoint 다이어트이지만,
-- 전 연령 중 mz세대가 다이어트에 대한 관심도가 가장 높음
-   - 다이어트 검색자의 79%가 20~40대
-- 저속노화 & 웰빙 트렌드의 주축인 mz세대
-- 사회초년생이라면 평균적으로, 구조적으로 경험할 수밖에 없는 경제적 제약 -> 가성비 레시피에 대한 관심도 높을수밖에
-- 커뮤니티에 대한 욕구
-   - 자신을 표현하기를 즐기고 광범위한 타인의 시선을 의식하는 특성을 가진 mz세대
-   - 웬만큼의 동기로는 성공이 어려운 다이어트를 SNS·플랫폼 활동에 익숙하고 “좋아요·팔로우·랭킹·보상” 요소에 강하게 반응하는 MZ세대의 속성에 특화 
+## 3. Key Features (주요 기능)
 
-> NAOS는 20~34세 MZ세대를 대상으로, 
-체중 감량을 목표로 하면서도 생활비 제약이 있는 사용자들이
- ‘한 끼 5천 원 이하, 20분 내 조리’ 같은 
-가성비 조건에 맞는 레시피를 공유·스크랩하고, 
-커뮤니티를 통해 동기부여와 보상을 받을 수 있는 
-다이어트 특화 플랫폼
+## 🎬 Whisper 기반 영상 자동분할
+- 레시피 영상 업로드 시 **OpenAI Whisper**가 음성을 분석
+- 문장별 타임스탬프를 추출하여 **조리 단계별 자동 분리**
+- 각 단계는 사용자가 넘길 때까지 **자동 반복재생**
+- 요리 중 손이 젖어도, 영상이 빨리 지나가도 걱정 없음
 
-</br>
+## 💰 AI 가성비 점수
+- GPT가 레시피의 **재료 가격, 영양 구성, 조리 시간**을 종합 분석
+- **0~100점**의 가성비 점수 산출
+  - 가격 효율성 35%
+  - 시간 효율성 25%
+  - 영양 균형 25%
+  - 재료 접근성 15%
+- 레시피 카드에 **배지 형태**로 표시
+- **가성비순 정렬** 필터 제공
 
-### 기존연구와의 비교
+## 🥗 건강 맞춤 필터
+- **카테고리**: 저탄수화물, 고단백, 반찬, 간식
+- **난이도**: 쉬움, 보통, 어려움
+- **최대 가격**: 0원 ~ 50,000원
+- **최대 조리 시간**: 0분 ~ 120분
+
+## 👥 SNS형 커뮤니티
+- **팔로우**: 다른 사용자 팔로우 및 팔로잉 피드
+- **좋아요**: 실시간 좋아요 수 반영
+- **댓글/대댓글**: WebSocket 기반 실시간 댓글
+- **책갈피**: 레시피 스크랩 및 프로필에서 확인
+
+## 🍳 요리 진행 추적
+- **요리 시작하기** 버튼으로 단계별 체크
+- 진행 상황 **서버 자동 저장**
+- 중단 후 이어서 진행 가능
+- 프로필의 **'요리중' 탭**에서 확인
+
+<br/>
+<br/>
+
+## 4. 기존연구와의 비교
 
  |NAOS|케토 다이어트 - 만개의 레시피|우리들의 식탁-요리를 스타일하다|
  |:------:|:------:|:------:|
@@ -61,20 +136,137 @@
  |단계별 북마크, “다음 단계” 버튼의 실행 보조 기능을 제공하여 조리가 편리하도록 함|손쉽게 요리할 수 있도록 돕는 조리 실행 보조 기능이 미흡|북마크 기능이 있지만 naos와 같이 보다 사용성을 고려한 보조 기능 효용성 떨어짐.|
 
 </br>
-
-### 제안 내용
-#### 문제점
-- 기존 앱들은 특정 식단(케토 등)에 치중하거나, 유료 구독 기반으로 경제적 부담이 크며, 조리 실행 보조 기능 및 커뮤니티 동기부여 기능이 부족함.
-- 특히 MZ세대는 다이어트에 높은 관심을 가지고 있음에도, 가성비와 지속가능성을 동시에 충족시키는 플랫폼이 부재함.
-
-#### 해결책
-- NAOS는 `20~34세 MZ세대`를 대상으로,
-   - 자동 성분 계산 (칼로리·영양소 표시),
-   - 가성비 필터 (“한 끼 5천 원 이하”, “20분 내 조리”),
-   - 실행 보조 기능 (단계별 북마크·“다음 단계” 버튼),
-   - 커뮤니티 & 보상 (스크랩/좋아요 기반 노출, 포인트-등급-리워드),
-   - AI 레시피 생성·요약·변형 기능을 제공하여 다이어트 레시피의 탐색·실행·공유 과정을 한 플랫폼에서 지원함.
 </br>
+
+## 5. Project Design
+## 요구사항 정의
+### 기술 스펙
+| 분류 | 기술 스택 |
+|------|-----------|
+| **Frontend** | ![React](https://img.shields.io/badge/react-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) |
+| **Backend** | ![Spring Boot](https://img.shields.io/badge/springboot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white) ![MySQL](https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white) |
+| **DevOps / Infra** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![Amazon EC2](https://img.shields.io/badge/Amazon%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) ![Amazon S3](https://img.shields.io/badge/Amazon%20S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white) ![NGINX](https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white) ![Terraform](https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white) |
+| **AI** | ![Python Flask Microservice](https://img.shields.io/badge/Microservice-Flask-blue?style=for-the-badge&logo=flask&logoColor=white) |
+| **Documentation/Test** | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=white) |
+
+</br>
+</br>
+
+## 6. Project Structure (프로젝트 구조)
+
+## 6.1 Backend
+```plaintext
+be/ (Backend - Spring Boot)
+└── src/
+    ├── main/
+    │   ├── java/com/naos/
+    │   │   ├── domain/
+    │   │   │   ├── auth/           # 인증/인가 (JWT, 이메일 인증)
+    │   │   │   │   ├── controller/
+    │   │   │   │   ├── service/
+    │   │   │   │   ├── dto/
+    │   │   │   │   └── entity/
+    │   │   │   ├── user/           # 사용자 관리
+    │   │   │   ├── recipe/         # 레시피 CRUD
+    │   │   │   ├── feed/           # 홈 피드 & 필터
+    │   │   │   ├── comment/        # 댓글/대댓글
+    │   │   │   ├── like/           # 좋아요
+    │   │   │   ├── bookmark/       # 책갈피(스크랩)
+    │   │   │   ├── follow/         # 팔로우/팔로잉
+    │   │   │   └── cooking/        # 요리 진행 추적
+    │   │   │
+    │   │   └── global/
+    │   │       ├── config/         # Spring 설정 (Security, WebSocket, Redis)
+    │   │       ├── exception/      # 전역 예외 처리
+    │   │       ├── init/           # 시드 데이터 초기화
+    │   │       ├── aws/            # S3 Presigned URL
+    │   │       └── websocket/      # WebSocket + Redis Pub/Sub
+    │   │
+    │   └── resources/
+    │       ├── application.yml
+    │       ├── application-dev.yml
+    │       └── application-prod.yml
+    │
+    └── Dockerfile
+```
+<br/>
+
+## 6.2 Frontend
+```plaintext
+fe/ (Frontend - Next.js)
+└── src/
+    ├── app/                        # Next.js App Router
+    │   ├── layout.tsx
+    │   ├── page.tsx                # 홈 피드
+    │   ├── (auth)/                 # 인증 (로그인/회원가입)
+    │   ├── (main)/                 # 메인 레이아웃
+    │   │   ├── feed/               # 피드 페이지
+    │   │   ├── recipe/[id]/        # 레시피 상세
+    │   │   ├── upload/             # 레시피 업로드
+    │   │   ├── profile/            # 프로필
+    │   │   └── following/          # 팔로잉 피드
+    │   │
+    ├── features/                   # 도메인별 로직
+    │   ├── auth/                   # 인증 관련
+    │   ├── recipe/                 # 레시피 관련
+    │   ├── feed/                   # 피드 관련
+    │   ├── comment/                # 댓글 관련
+    │   └── upload/                 # 업로드 관련 (Whisper 연동)
+    │
+    ├── components/                 # 공통 컴포넌트
+    ├── hooks/                      # 커스텀 훅
+    ├── lib/                        # 유틸리티 (axios, etc)
+    └── constants/                  # 상수 정의
+```
+<br/>
+
+## 6.3 AI Server
+```plaintext
+ai/ (AI Server - Flask)
+└── app/
+    ├── main.py                     # Flask 앱 엔트리포인트
+    ├── routes/
+    │   ├── whisper.py              # Whisper STT API
+    │   └── analysis.py             # GPT 가성비 분석 API
+    ├── services/
+    │   ├── whisper_service.py      # Whisper 음성→텍스트 변환
+    │   └── gpt_service.py          # GPT 가성비 점수 산출
+    └── Dockerfile
+```
+<br/>
+
+## 6.4 Architecture
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Client    │────▶│    Nginx    │────▶│   Next.js   │
+│  (Browser)  │     │  (Reverse   │     │  (Frontend) │
+└─────────────┘     │   Proxy)    │     └─────────────┘
+                    └──────┬──────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Spring Boot │     │    Flask    │     │    Redis    │
+│  (Backend)  │◀───▶│ (AI Server) │     │  (Pub/Sub)  │
+└──────┬──────┘     └─────────────┘     └─────────────┘
+       │                   │
+       ▼                   ▼
+┌─────────────┐     ┌─────────────┐
+│    MySQL    │     │  OpenAI API │
+│ (Database)  │     │  (Whisper,  │
+└─────────────┘     │    GPT)     │
+                    └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│  Amazon S3  │
+│  (Storage)  │
+└─────────────┘
+```
+
+<br/>
+<br/>
+
 
 ### 기대 효과 및 의의
 - 행동 변화
@@ -86,49 +278,10 @@
    - 국내 10조원 규모 다이어트 시장에서 MZ세대 특화 플랫폼으로 틈새 공략 → 1년 내 5만 사용자 확보 목표
 - 건강 효과
    - 자동 성분 계산 및 AI 맞춤 추천 → 사용자별 칼로리 관리 정확도 25% 향상 기대
-</br>
-
-### 구현 기능
-- **자동 성분 계산**
-   - 재료·용량 입력 시 칼로리와 탄단지 비율 자동 표시 (Nutrition API 활용)
-- **가성비 필터**
-   - e.g.) “5천 원 이하 한 끼”, “20분 내 조리” → 조건별 레시피 탐색
-- **실행 보조 기능**
-   - 단계별 북마크, “다음 단계” 버튼으로 실제 조리 시 UX 개선
-- **커뮤니티 & 보상 시스템**
-   - 스크랩·좋아요 많은 레시피 → 핫게 노출
-   - 포인트 적립 → 등급 상승 → 리워드 제공
-   - 댓글·팔로우 기반 정보 공유 및 동기 부여
-- **AI 기능**
-   - 레시피 자동 생성: 조건 입력 시 개인화된 다이어트 레시피 생성
-   - 레시피 자동 요약 & 변형: “핵심 5단계 요약”, “2인분 → 1인분 변환”
-   - AI 코치: 목표 체중·기간 입력 시 일간/주간 루틴 추천
-
 
 <br/>
 <br/>
-
----
-
-## Project Design
-## 요구사항 정의
-### 기술 스펙
-| 분류 | 기술 스택 |
-|------|-----------|
-| **Frontend** | ![React](https://img.shields.io/badge/react-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) |
-| **Backend** | ![Spring Boot](https://img.shields.io/badge/springboot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white) ![MySQL](https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white) |
-| **DevOps / Infra** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![Amazon EC2](https://img.shields.io/badge/Amazon%20EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) ![Amazon S3](https://img.shields.io/badge/Amazon%20S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white) ![NGINX](https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white) ![Terraform](https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white) |
-| **AI** | ![Python Flask Microservice](https://img.shields.io/badge/Microservice-Flask-blue?style=for-the-badge&logo=flask&logoColor=white) |
-| **Documentation/Test** | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=white) |
-
-
-### feature 상세 설명
-- `자동 성분 계산`: 실제 사용자 레시피 입력 후 Nutrition API와 DB 연동 정확도 테스트 (예상 결과: ±5% 이내 오차)
-- `가성비 필터`: 다양한 레시피 DB에 가격·시간 태그를 부여하고, 조건 검색 정확성 평가 (예상 결과: 90% 이상 매칭률)
-- `실행 보조 기능`: 단계별 북마크/다음 단계 버튼 사용성 테스트 (예상 결과: 사용자 만족도 80% 이상)
-- `커뮤니티 & 보상`: 포인트·등급 시스템 도입 후 사용자 참여도 비교 (예상 결과: 공유/스크랩 건수 2배 증가)
-- `AI 기능`: AI 추천 레시피와 실제 유저 평가 비교 (예상 결과: 평균 4점/5점 이상 만족도)
 
 ## 전체시스템 구성
-<img width="2400" height="1350" alt="과제수행계획서의 사본 (1)" src="https://github.com/user-attachments/assets/924abb10-7775-48b0-8785-98c8a02bc7d7" />
+<img width="2400" height="1350" alt="naos sw 구조도" src="https://github.com/user-attachments/assets/5d3d4e23-8670-48f1-a0fe-90b3a1a150cf" />
 
