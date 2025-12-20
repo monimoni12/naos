@@ -29,7 +29,11 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
-    return response.json();
+    const data = await response.json();
+    return {
+      success: response.ok,
+      message: data.message
+    };
   },
 
   verifyEmail: async (email: string, code: string): Promise<VerificationCheckResponse> => {
@@ -38,7 +42,11 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code }),
     });
-    return response.json();
+    const data = await response.json();
+    return {
+      success: response.ok && data.verified,
+      message: data.message
+    };
   },
 
   checkUsername: async (username: string): Promise<UsernameCheckResponse> => {
@@ -54,7 +62,11 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return response.json();
+    const result = await response.json();
+    return {
+      ...result,
+      success: response.ok
+    };
   },
 
   login: async (identifier: string, password: string): Promise<LoginResponse> => {
