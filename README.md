@@ -129,7 +129,7 @@ Whisper 기반 영상 자동분할 기술을 최초로 적용하여,
 
  |NAOS|케토 다이어트 - 만개의 레시피|youtube|
  |:------:|:------:|:------:|
- |<img width="963" height="413" alt="제목 없는 디자인" src="https://github.com/user-attachments/assets/35d43e51-0e78-4ff6-b942-54e704349e0d" />|<img width="1170" height="402" alt="image" src="https://github.com/user-attachments/assets/0c28c36e-69f8-4059-9a3f-9bc48ea28f38" />|<img width="150" alt="image" src="https://github.com/user-attachments/assets/36c74122-a0f1-46da-9e11-cace73b950d1" />|
+ |<img width="963" height="413" alt="제목 없는 디자인" src="https://github.com/user-attachments/assets/35d43e51-0e78-4ff6-b942-54e704349e0d" />|<img width="300" alt="image" src="https://github.com/user-attachments/assets/0c28c36e-69f8-4059-9a3f-9bc48ea28f38" />|<img width="150" alt="image" src="https://github.com/user-attachments/assets/36c74122-a0f1-46da-9e11-cace73b950d1" />|
  |저탄고지뿐 아니라 저염, 고단백, 가성비 레시피까지 다양한 다이어트 유형 지원| 케토 중심이라 식단 범위가 좁음 → 건강한 체중감량 식단은 키토 말고도 다양하게 존재하며, 탄수화물 제한이 어려운 사람이 존재하는 등 부작용이 있을 수 있음. |---|
  |모든 기능을 무료로 제공| 구독료와 프리미엄 콘텐츠 요금 모두 있는 점을 확인. 주머니 사정이 넉넉치 않거나 지불 용의가 없는 사용자에게는 부담이 될 수밖에 없음 |---|
  |사용자들이 레시피를 창출하고 사용자 간 동기부여·경험 공유 등을 통해 자유롭게 교류할 수 있도록 함|커뮤니티/사용자 참여 기능이 제한적. 따라서 사용자 간 경험 공유·실행 기록 가능성이 미비.|△|
