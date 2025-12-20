@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
  * 
  * ⭐ 수정: User currentUser → Long userId (다른 컨트롤러와 일관성 유지)
  * ⭐ 수정: commentCount를 삭제되지 않은 댓글만 카운트하도록 변경
+ * ⭐ 수정: "전체" 카테고리/난이도 선택 시 필터 무시
  */
 @Slf4j
 @Service
@@ -148,26 +149,31 @@ public class FeedService {
 
     /**
      * 필터 조건 적용
+     * ⭐ 수정: "전체" 값이면 필터 무시
      */
     private boolean applyFilter(Recipe recipe, FeedFilterRequest filter) {
+        // 가격 필터
         if (filter.getMaxPrice() != null && recipe.getPriceEstimate() != null) {
             if (recipe.getPriceEstimate() > filter.getMaxPrice()) {
                 return false;
             }
         }
         
+        // 조리시간 필터
         if (filter.getMaxCookTime() != null && recipe.getCookTimeMin() != null) {
             if (recipe.getCookTimeMin() > filter.getMaxCookTime()) {
                 return false;
             }
         }
         
-        if (filter.hasCategory()) {
+        // ⭐ 카테고리 필터 - "전체"면 무시
+        if (filter.hasCategory() && !isAllCategory(filter.getCategory())) {
             if (!filter.getCategory().equals(recipe.getCategory())) {
                 return false;
             }
         }
         
+        // ⭐ 난이도 필터 - "전체"면 무시 (hasDifficulty가 이미 null 체크함)
         if (filter.hasDifficulty()) {
             if (recipe.getDifficulty() != filter.getDifficulty()) {
                 return false;
@@ -175,6 +181,17 @@ public class FeedService {
         }
         
         return true;
+    }
+
+    /**
+     * ⭐ "전체" 카테고리인지 확인
+     */
+    private boolean isAllCategory(String category) {
+        if (category == null || category.isBlank()) {
+            return true;
+        }
+        String lower = category.toLowerCase().trim();
+        return lower.equals("전체") || lower.equals("all") || lower.equals("");
     }
 
     /**
