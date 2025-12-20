@@ -138,7 +138,21 @@ Whisper 기반 영상 자동분할 기술을 최초로 적용하여,
 </br>
 </br>
 
-## 5. Project Design
+### 5. 기대 효과 및 의의
+- 행동 변화
+   - 단계별 실행 보조 → 레시피 완성률 30% 향상
+   - 커뮤니티·보상 시스템 → 레시피 공유/스크랩 월 1만 건 이상 활성화
+- 경제적 효과
+   - 가성비 필터 활용 시 월 평균 식비 10~20% 절감 기대
+- 시장성
+   - 국내 10조원 규모 다이어트 시장에서 MZ세대 특화 플랫폼으로 틈새 공략 → 1년 내 5만 사용자 확보 목표
+- 건강 효과
+   - 자동 성분 계산 및 AI 맞춤 추천 → 사용자별 칼로리 관리 정확도 25% 향상 기대
+
+<br/>
+<br/>
+
+## 6. Project Design
 ## 요구사항 정의
 ### 기술 스펙
 | 분류 | 기술 스택 |
@@ -152,9 +166,9 @@ Whisper 기반 영상 자동분할 기술을 최초로 적용하여,
 </br>
 </br>
 
-## 6. Project Structure (프로젝트 구조)
+## 7. Project Structure (프로젝트 구조)
 
-## 6.1 Backend
+## 7.1 Backend
 ```plaintext
 be/ (Backend - Spring Boot)
 └── src/
@@ -191,7 +205,7 @@ be/ (Backend - Spring Boot)
 ```
 <br/>
 
-## 6.2 Frontend
+## 7.2 Frontend
 ```plaintext
 fe/ (Frontend - Next.js)
 └── src/
@@ -220,7 +234,7 @@ fe/ (Frontend - Next.js)
 ```
 <br/>
 
-## 6.3 AI Server
+## 7.3 AI Server
 ```plaintext
 ai/ (AI Server - Flask)
 └── app/
@@ -235,7 +249,7 @@ ai/ (AI Server - Flask)
 ```
 <br/>
 
-## 6.4 Architecture
+## 7.4 Architecture
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Client    │────▶│    Nginx    │────▶│   Next.js   │
@@ -267,20 +281,6 @@ ai/ (AI Server - Flask)
 <br/>
 <br/>
 
-
-### 기대 효과 및 의의
-- 행동 변화
-   - 단계별 실행 보조 → 레시피 완성률 30% 향상
-   - 커뮤니티·보상 시스템 → 레시피 공유/스크랩 월 1만 건 이상 활성화
-- 경제적 효과
-   - 가성비 필터 활용 시 월 평균 식비 10~20% 절감 기대
-- 시장성
-   - 국내 10조원 규모 다이어트 시장에서 MZ세대 특화 플랫폼으로 틈새 공략 → 1년 내 5만 사용자 확보 목표
-- 건강 효과
-   - 자동 성분 계산 및 AI 맞춤 추천 → 사용자별 칼로리 관리 정확도 25% 향상 기대
-
-<br/>
-<br/>
 
 ## 전체시스템 구성
 <img width="2400" height="1350" alt="naos sw 구조도" src="https://github.com/user-attachments/assets/5d3d4e23-8670-48f1-a0fe-90b3a1a150cf" />
