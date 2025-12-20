@@ -64,6 +64,31 @@
 
 <br/>
 
+## 📦 How to Install
+
+### 1. 레포지토리 클론
+```bash
+git clone https://github.com/monimoni12/naos.git
+cd naos
+```
+
+### 2. 환경 변수 설정
+```bash
+cp .env.example .env
+nano .env  # 실제 값 입력
+```
+
+### 3. Docker로 전체 실행
+```bash
+docker compose up --build -d
+```
+
+### 4. 접속
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8090
+
+</br>
+
 ## 🛠️ How to Build (로컬 환경 빌드)
 
 ### Prerequisites
