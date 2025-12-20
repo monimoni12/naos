@@ -44,6 +44,7 @@ public class AuthService {
     private final EmailVerificationCodeRepository verificationCodeRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final EmailService emailService;  // ⭐ 추가
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String[] RESERVED_USERNAMES = {
@@ -318,12 +319,7 @@ public class AuthService {
     }
 
     private void sendEmail(String email, String code) {
-        // TODO: 실제 이메일 발송 구현 (SMTP, SendGrid, AWS SES 등)
-        log.info("========================================");
-        log.info("📧 인증 코드 발송");
-        log.info("   To: {}", email);
-        log.info("   Code: {}", code);
-        log.info("   (개발 환경에서는 이 로그로 코드를 확인하세요)");
-        log.info("========================================");
+        // ⭐ EmailService로 위임 (환경에 따라 실제 발송 또는 로그 출력)
+        emailService.sendVerificationCode(email, code);
     }
 }
